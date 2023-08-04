@@ -200,9 +200,18 @@ endif ()
 
 
 
+project(gdalcubepy)
+include_directories("${CMAKE_SOURCE_DIR}/python")
 
+file (GLOB PYTHON_FILES "python/*.cpp" "python/*.h")
 
+include(pybind11.cmake)
+pybind11_add_module(gdalcubepy ${SOURCE_FILES} ${PYTHON_FILES})
 
+target_link_libraries(gdalcubepy PUBLIC libgdalcubes_shared)
 
-
-
+install(
+        TARGETS gdalcubepy
+        COMPONENT python
+        LIBRARY DESTINATION "${PYTHON_LIBRARY_DIR}"
+)

@@ -1,4 +1,3 @@
-.idea/
 cmake-build-debug/
 cmake-build-release/
 build/
@@ -14,3 +13,13 @@ doc/site
 *.a
 *.gch
 doxygen
+
+# Editors
+.idea/
+.vscode/
+
+# virtualenv
+.venv/
+
+# os
+.DS_Store

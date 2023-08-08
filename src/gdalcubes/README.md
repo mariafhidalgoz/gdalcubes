@@ -1,100 +1,124 @@
-# gdalcubes - Earth observation data cubes from GDAL image collections 
 
-[![Build Status](https://travis-ci.org/appelmar/gdalcubes.svg?branch=master)](https://travis-ci.org/appelmar/gdalcubes)
-
-<a href="https://gdalcubes.github.io/docs"><img src="gdalcubes_logo_small.png" align="right" height="180"/></a>
-**gdalcubes** is a library to represent collections of Earth Observation (EO) images as _on demand_ data cubes (or _multidimensional arrays_). Users define data cubes by spatiotemporal extent, resolution, and spatial reference system and let gdalcubes read only relevant parts of the data and simultaneously apply reprojection, resampling, and cropping (using [gdalwarp](https://www.gdal.org/gdalwarp.html)). Data cubes may be simply exported as NetCDF files or directly streamed chunk-wise into external software such as R or Python. The library furthermore implements simple operations to reduce data cubes over time, to apply pixel-wise arithmetic expressions, and to filter by space, time, and bands. 
-
-gdalcubes is not a database, i.e., it does not need to store additional copies of the imagery but instead
-simply links to and indexes existing files / GDAL datasets. Using [GDAL virtual file systems](https://www.gdal.org/gdal_virtual_file_systems.html), it can directly access
-data in cloud storage and run computations in distributed environments with `gdalcubes_server` and Docker. 
-
-The library is written in C++ and includes a basic command line interface and an [R package]((https://github.com/appelmar/gdalcubes_R)). A python package is
-planned for the future. gdalcubes is licensed under the [MIT license](https://opensource.org/licenses/MIT).
-
-# Core features:
-
-- Create image collections that link to and index existing imagery from local files or cloud storage 
-- Read multitemporal, multispectral image collections as on demand data cubes with desired spatiotemporal resolution, extent, and map projection
-- Abstract from complexities in the data like different map projections for adjacent images and different resolutions for different bands
-- Stream chunks of data cubes to external programs (e.g. R, python)
-- Scale computations on data cubes in distributed environments with `gdalcubes_server` and Docker (yet experimental)
-
-
-
-# Installation
-
-
-## Installation from sources
-
-gdalcubes uses CMake and can be compiled with a typical CMake workflow as listed below.
-
-```
-git clone https://github.com/appelmar/gdalcubes && cd gdalcubes
-mkdir -p build 
-cd build 
-cmake -DCMAKE_BUILD_TYPE=Release ../ -DCMAKE_INSTALL_PREFIX=/usr
-make 
-sudo make install
+Create environment
+```shell
+virtualenv --python=python3.10 .venv
 ```
 
-You might need to install a few libraries before compiling gdalcubes successfully. On Ubuntu `apt install libgdal-dev libnetcdf-dev libcurl4-openssl-dev libsqlite3-dev` will install all libraries needed to compile 
-the core gdalcubes library. If you want to compile the command line interface, you will furthermore need `apt install libboost-program-options-dev libboost-system-dev`
-and running gdalcubes as a server additionally requires `apt install libcpprest-dev`.
-
-
-
-
-
-## Docker image
-This repository includes a Docker image which you can use either to run the gdalcubes command line interface interactively
-or to run `gdalcubes_server` as a service for distributed processing. The commands below demonstrate how to build the image and run a container.
-Notice that the image builds GDAL from sources, which might take up to 30 minutes.
- 
-
+```shell
+mkdir build
+cd build
 ```
-git clone https://github.com/appelmar/gdalcubes && cd gdalcubes 
-docker build -t appelmar/gdalcubes .
-docker run -d -p 11111:1111 appelmar/gdalcubes # runs gdalcubes_server as a deamon 
-docker run appelmar/gdalcubes /bin/bash # get a command line where you can run gdalcubes 
-``` 
+
+```shell
+make clean
+```
+
+```shell
+cd build
+cmake .. \
+-DPYTHON_LIBRARY_DIR="/Users/maria/GitHub/gdalcubes/src/gdalcubes/.venv/lib/python3.10/site-packages" \
+-DPYTHON_EXECUTABLE="/Users/maria/GitHub/gdalcubes/src/gdalcubes/.venv/bin/python3.10" \
+-DCMAKE_INSTALL_PREFIX=/usr/local/ -DCMAKE_BUILD_TYPE=Release
+make -j 2
+make install
+```
+
+```shell
+cmake .. -DPYTHON_LIBRARY_DIR="/Users/maria/GitHub/gdalcubes/src/gdalcubes/.venv/lib/python3.10/site-packages" -DPYTHON_EXECUTABLE="/Users/maria/GitHub/gdalcubes/src/gdalcubes/.venv/bin/python3.10" -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Debug && make -j 2 && make install
+```
 
 
-# R package
-The [gdalcubes R package](https://github.com/appelmar/gdalcubes_R) is hosted on https://github.com/appelmar/gdalcubes_R.
-It includes a Dockerfile that runs [RStudio Server](https://www.rstudio.com/products/rstudio-server/) with the gdalcubes R package.
+Activate environment
+```shell
+source .venv/bin/activate
+```
 
-# Documentation
-More detailed information can be found at the documentation page under https://gdalcubes.github.io/. 
-
-# Warning
-The library is still in an early development version. Major changes are possible to make gdalcubes more user-friendly, more stable, faster, and more robust.
-The documentation is also preliminary and not yet complete.
-
-# Credits
-gdalcubes uses the following open source libraries. Detailed licensing and copyright information can be found at https://gdalcubes.github.io/source/introduction/credits.html and in LICENSE_THIRDPARTY.
+```shell
+python
+```
 
 
-**[GDAL](https://www.gdal.org/):  A translator library for raster and vector geospatial data formats**
+```python
+import gdalcubepy
+import os
+# Collection Format
+format_str = f"{os.getcwd()}/formats/L8_SR.json"
+cf = gdalcubepy.collection_format(format_str)
+collection_is_null = cf.is_null()
+if collection_is_null:
+    print(f"ERROR: Creating Collection {format_str}.")
+else:
+    print(f"Collection {format_str} created.")
 
-**[json11](https://github.com/dropbox/json11)**
+# Image Collection
+list_files = ["/Users/maria/Documents/thesis/L8_Amazon_mini/LC082290642019031601T2-SC20190715045938/"]
+ic = gdalcubepy.image_collection()
+ic.create(cf, list_files, False)
+ic.write("./new_image_collection.db")
 
-**[SQLite](https://www.sqlite.org/): A self-contained, high-reliability, embedded, full-featured, public-domain, SQL database engine**
+# Cube view
+cv = gdalcubepy.cube_view()
+cv.srs("EPSG:3857")
+cv.set_x_axis(-6180000.0, -6080000.0, 1000.0)
+cv.set_y_axis(-550000.0, -450000.0, 1000.0)
+# cv.set_t_axis(datetime::from_string("2014-01-01"), datetime::from_string("2014-12-31"), duration::from_string("P1D"));
 
-**[CURL](https://curl.haxx.se/): Command line tool and library for transferring data with URLs**
+from datetime import datetime
+datetime_str = '14-01-01'
+datetime_object = datetime.strptime(datetime_str, '%y-%m-%d')
 
-**[TinyExpr](https://github.com/codeplea/tinyexpr): A very small recursive descent parser and evaluation engine for math expressions**
 
-**[netCDF](https://www.unidata.ucar.edu/software/netcdf): The Unidata network Common Data Form C library**
-   
-**[tiny-process-library](https://gitlab.com/eidheim/tiny-process-library): A small platform independent library making it simple to create and stop new processes in C++**
+# Raster Cube
+icc = gdalcubepy.image_collection_cube(ic)
+# raster_cube(L8.col, v)
 
-**[Catch2](https://github.com/catchorg/Catch2): A modern, C++-native, header-only, test framework for unit-tests, TDD and BDD**
-       
-**[Date](https://github.com/HowardHinnant/date): A date and time library based on the C++11/14/17 <chrono> header**   
+# Select Bands
+# gc_create_select_bands_cube
+# L8.cube = select_bands(raster_cube(L8.col, v), c("B04", "B05"))
 
-**[cpprestsdk](https://github.com/Microsoft/cpprestsdk)**
+# Create field with NDVI
+# L8.ndvi = apply_pixel(L8.cube, "(B05-B04)/(B05+B04)", "NDVI") 
 
-**[Boost.Filesystem](https://www.boost.org/doc/libs/1_68_0/libs/filesystem/doc/index.htm)**
+# Create ncdf_cube
+# ncdf_cube
 
-**[Boost.Program_options](https://www.boost.org/doc/libs/1_68_0/doc/html/program_options.html)**
+# Plot ncdf_cube
+# https://www.earthinversion.com/utilities/reading-NetCDF4-data-in-python/
+
+# exmaple in R
+#' L8.col = image_collection(file.path(tempdir(), "L8.db"))
+#' v = cube_view(extent=list(left=388941.2, right=766552.4, 
+#'               bottom=4345299, top=4744931, t0="2018-04", t1="2018-06"),
+#'               srs="EPSG:32618", nx = 497, ny=526, dt="P1M")
+#'               
+#' plot(select_bands(raster_cube(L8.col, v), c("B02", "B03", "B04")), rgb=3:1)
+#'               
+#' L8.cube = select_bands(raster_cube(L8.col, v), c("B04", "B05")) 
+#' L8.ndvi = apply_pixel(L8.cube, "(B05-B04)/(B05+B04)", "NDVI") 
+#' plot(reduce_time(L8.ndvi, "median(NDVI)"), key.pos=1, zlim=c(0,1))
+```
+
+```python
+import os
+import gdalcubepy
+
+# gdalcubes: Image Collection
+gdalcubepy.gdalcubes.gc_create_image_collection_from_format_test(
+    f"{os.getcwd()}/Python/L8_Amazon_mini/LC082290632016072901T1-SC20190715045704",
+    f"{os.getcwd()}/Python/new_image_collection.db",
+    f"{os.getcwd()}/formats/L8_SR.json")
+# gdalcubepy.gdalcubes.gc_create_image_collection_from_format(
+#     [f"{os. getcwd()}/Python/L8_Amazon_mini/LC082290632016072901T1-SC20190715045704"],
+#     f"{os. getcwd()}/formats/L8_SR.json",
+#     f"{os. getcwd()}/Python/new_image_collection.db")
+# gdalcubes: Raster Cube
+gdalcubepy.gdalcubes.raster_cube(
+    f"{os.getcwd()}/Python/L8_Amazon_mini/LC082290632016072901T1-SC20190715045704",
+    f"Python/band_select_2.nc",
+    f"{os.getcwd()}/formats/L8_SR.json")
+```
+
+Deactivate environment
+```shell
+deactivate
+```

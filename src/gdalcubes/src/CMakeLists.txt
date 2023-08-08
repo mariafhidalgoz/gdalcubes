@@ -203,7 +203,7 @@ endif ()
 project(gdalcubepy)
 include_directories("${CMAKE_SOURCE_DIR}/python")
 
-file (GLOB PYTHON_FILES "python/*.cpp" "python/*.h")
+file (GLOB PYTHON_FILES "python/*.cpp" "python/*.h" "code/*.cpp" "code/*.h")
 
 include(pybind11.cmake)
 pybind11_add_module(gdalcubepy ${SOURCE_FILES} ${PYTHON_FILES})

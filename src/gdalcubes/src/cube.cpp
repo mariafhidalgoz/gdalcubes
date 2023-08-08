@@ -29,6 +29,7 @@ SOFTWARE.
 
 #include <algorithm>  // std::transform
 #include <fstream>
+#include <iostream>
 #include <thread>
 #include <cstring>
 
@@ -736,7 +737,6 @@ void cube::write_png_collection(std::string dir, std::string prefix, std::vector
 void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool with_VRT, bool write_bounds,
                              packed_export packing, bool drop_empty_slices, std::shared_ptr<chunk_processor> p) {
     std::string op = filesystem::make_absolute(path);
-
     if (filesystem::is_directory(op)) {
         throw std::string("ERROR in cube::write_netcdf_file(): output already exists and is a directory.");
     }
@@ -1205,7 +1205,6 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     prg->finalize();
 
     // netCDF is now written, write additional per-time-slice VRT datasets if needed
-
     if (with_VRT) {
         for (uint32_t it = 0; it < size_t(); ++it) {
             std::string dir = filesystem::directory(path);

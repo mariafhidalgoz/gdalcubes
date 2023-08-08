@@ -23,3 +23,6 @@ doxygen
 
 # os
 .DS_Store
+
+# Data
+/Python/L8_Amazon_mini

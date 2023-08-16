@@ -16,9 +16,9 @@ void init_gdalcubes(py::module &m) {
                     py::arg("files"),
                     py::arg("format_file"),
                     py::arg("outfile"))
-        .def_static("gc_create_image_collection_from_format_test",
+        .def_static("gc_create_image_collection_from_format_all",
                     py::overload_cast<std::string, std::string, std::string>(
-                        &gdalcubes::gdalcubes::gc_create_image_collection_from_format_test),
+                        &gdalcubes::gdalcubes::gc_create_image_collection_from_format_all),
                     py::arg("input"),
                     py::arg("output"),
                     py::arg("format"))
@@ -26,5 +26,17 @@ void init_gdalcubes(py::module &m) {
                     py::overload_cast<std::string, std::string>(
                         &gdalcubes::gdalcubes::raster_cube),
                     py::arg("input"),
-                    py::arg("output"));
+                    py::arg("output"))
+        .def_static("write_chunks_netcdf",
+                    py::overload_cast<std::string, std::string, uint16_t>(
+                        &gdalcubes::gdalcubes::write_chunks_netcdf),
+                    py::arg("input"),
+                    py::arg("output"),
+                    py::arg("nthreads"))
+        .def_static("write_single_chunk_netcdf",
+                    py::overload_cast<std::string, std::string, gdalcubes::chunkid_t>(
+                        &gdalcubes::gdalcubes::write_single_chunk_netcdf),
+                    py::arg("input"),
+                    py::arg("output"),
+                    py::arg("chunk_id"));
 }

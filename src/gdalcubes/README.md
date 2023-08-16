@@ -38,7 +38,7 @@ python
 ```
 
 
-```python
+```python step by step in python | ERROR: Pointers
 import gdalcubepy
 import os
 # Collection Format
@@ -98,24 +98,36 @@ icc = gdalcubepy.image_collection_cube(ic)
 #' plot(reduce_time(L8.ndvi, "median(NDVI)"), key.pos=1, zlim=c(0,1))
 ```
 
-```python
+```python 
 import os
+
 import gdalcubepy
 
 # gdalcubes: Image Collection
-gdalcubepy.gdalcubes.gc_create_image_collection_from_format_test(
-    f"{os.getcwd()}/Python/L8_Amazon_mini/LC082290632016072901T1-SC20190715045704",
-    f"{os.getcwd()}/Python/new_image_collection.db",
+# gdalcubepy.gdalcubes.gc_create_image_collection_from_format_all(
+#     f"{os.getcwd()}/Python/L8_Amazon_mini/LC082290632016072901T1-SC20190715045704",
+#     f"{os.getcwd()}/Python/new_image_collection.db",
+#     f"{os.getcwd()}/formats/L8_SR.json")
+gdalcubepy.gdalcubes.gc_create_image_collection_from_format_all(
+    f"{os.getcwd()}/Python/file_list.txt",
+    f"{os.getcwd()}/Python/results/new_image_collection_from_file.db",
     f"{os.getcwd()}/formats/L8_SR.json")
-# gdalcubepy.gdalcubes.gc_create_image_collection_from_format(
-#     [f"{os. getcwd()}/Python/L8_Amazon_mini/LC082290632016072901T1-SC20190715045704"],
-#     f"{os. getcwd()}/formats/L8_SR.json",
-#     f"{os. getcwd()}/Python/new_image_collection.db")
 # gdalcubes: Raster Cube
 gdalcubepy.gdalcubes.raster_cube(
-    f"{os.getcwd()}/Python/L8_Amazon_mini/LC082290632016072901T1-SC20190715045704",
-    f"Python/band_select_2.nc",
-    f"{os.getcwd()}/formats/L8_SR.json")
+    f"{os.getcwd()}/Python/results/new_image_collection_from_file.db",
+    f"Python/results/complete_netcdf.nc")
+# Write chunks netcdf
+gdalcubepy.gdalcubes.write_chunks_netcdf(
+    f"{os.getcwd()}/Python/results/new_image_collection_from_file.db",
+    "Python/results/",
+    1
+)
+# Write single chunk netcdf
+gdalcubepy.gdalcubes.write_single_chunk_netcdf(
+    f"{os.getcwd()}/Python/results/new_image_collection_from_file.db",
+    f"Python/results/single_chunk.nc",
+    1
+)
 ```
 
 Deactivate environment

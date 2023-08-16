@@ -23,13 +23,13 @@ void gdalcubes::gc_create_image_collection_from_format(
     image_collection::create(cfmt, files)->write(outfile);
 }
 
-void gdalcubes::gc_create_image_collection_from_format_test(
+void gdalcubes::gc_create_image_collection_from_format_all(
     std::string input = "./L8_Amazon_mini/LC082290632016072901T1-SC20190715045704",
     std::string output = "./new_image_collection.db",
     std::string format = "/Users/maria/GitHub/gdalcubes/src/gdalcubes/formats/L8_SR.json") {
     config::instance()->gdalcubes_init();
     config::instance()->set_error_handler(error_handler::error_handler_debug);
-    std::cout << "GOOOO -> gc_create_image_collection_from_format_test" << std::endl;
+    std::cout << "GOOOO -> gc_create_image_collection_from_format_all" << std::endl;
 
     bool scan_archives = true;
     bool recursive = false;
@@ -83,15 +83,10 @@ void gdalcubes::gc_create_image_collection_from_format_test(
 std::vector<std::string> gdalcubes::string_list_from_text_file(std::string filename) {
     std::vector<std::string> out;
 
-    std::cout << "filename" << std::endl;
-    std::cout << filename << std::endl;
     std::string line;
     std::ifstream infile(filename);
     while (std::getline(infile, line))
-        std::cout << "line" << std::endl;
-    std::cout << line << std::endl;
-    out.push_back(line);
-    std::cout << "Output" << std::endl;
+        out.push_back(line);
     return out;
 }
 
@@ -99,44 +94,84 @@ std::vector<std::string> gdalcubes::string_list_from_text_file(std::string filen
 // std::shared_ptr<image_collection_cube> gdalcubes::raster_cube(
 void gdalcubes::raster_cube(
     std::string input = "./image_collection.db",
-    std::string output = "./band_select.nc") {
+    std::string output = "./complete_netcdf.nc") {
+    config::instance()->gdalcubes_init();
 
-    cube_view cv;
-    cv.srs("EPSG:3857");
-    cv.set_x_axis(-6180000.0, -6080000.0, 100.0);
-    cv.set_y_axis(-550000.0, -450000.0, 100.0);
-    cv.set_t_axis(datetime::from_string("2016-07-01"), datetime::from_string("2016-07-31"), duration::from_string("P1D"));
-//    cube_view w;
-//    w.left() = 300000.000;
-//    w.top() = 5800020.000;
-//    w.bottom() = 5690220.000;
-//    w.right() = 409800.000;
-//    w.srs() = "EPSG:32632";
-//    w.nx() = 500;
-//    w.ny() = 500;
-//    w.dt(duration::from_string("P1D"));
-//    w.t0() = datetime::from_string("2018-06-14");
-//    w.t1() = datetime::from_string("2018-06-14");
-    std::cout << "Cube View created" << std::endl;
-    std::cout << cv.bottom() << std::endl;
-    std::cout << cv.dx() << std::endl;
+    //    cube_view cv;
+    //    cv.srs("EPSG:32622");
+    //    cv.set_x_axis(-59.12746, -52.09798, 100.0);
+    //    cv.set_y_axis(-6.84404, -1.844241, 100.0);
+    //    cv.set_t_axis(datetime::from_string("2014-07-01"), datetime::from_string("2014-07-31"), duration::from_string("P1D"));
+    //    std::cout << "Cube View created" << std::endl;
+    //    std::cout << cv.bottom() << std::endl;
+    //    std::cout << cv.dx() << std::endl;
 
-    auto icc = image_collection_cube::create(input, cv);
-//    auto icc = image_collection_cube(ic);
-//    auto icc = image_collection_cube::create(ic, cv);
-//    auto icc = image_collection_cube::create(ic);
+    //    auto icc = image_collection_cube::create(input, cv);
+    auto icc = image_collection_cube::create(input);
+    //    auto icc = image_collection_cube::create(ic, cv);
+    //    auto icc = image_collection_cube::create(ic);
     std::cout << "Image Collection Cube | Raster Cube created" << std::endl;
     //    std::cout << icc << std::endl;
 
-    auto cb = select_bands_cube::create(icc, std::vector<std::string>{"B04", "B05"});
-    std::cout << "Select Bands" << std::endl;
-    cb->write_netcdf_file(output);
+    //    auto cb = select_bands_cube::create(icc, std::vector<std::string>{"B04", "B05"});
+    //    std::cout << "Select Bands" << std::endl;
+    //    cb->write_netcdf_file(output);
+    icc->write_netcdf_file(output);
     std::cout << "Write NetCDF" << std::endl;
+}
 
-//    cb2->write_tif_collection("/Users/maria/GitHub/gdalcubes/src/gdalcubes/Python",
-//                              "blabla", true, true, std::map<std::string, std::string>(), "NEAREST", packed_export::make_uint8(1, 0));
+void gdalcubes::write_chunks_netcdf(
+    std::string input = "./image_collection.db",
+    std::string output = "Python",
+    uint16_t nthreads = 1) {
+    config::instance()->gdalcubes_init();
 
-//    cb->write_gdal_image("test_example_1_write_gdal.tif");
+    config::instance()->set_default_chunk_processor(std::dynamic_pointer_cast<chunk_processor>(std::make_shared<chunk_processor_multithread>(nthreads)));
+
+    //    auto icc = image_collection_cube::create(input, cv);
+    auto icc = image_collection_cube::create(input);
+    std::cout << "Image Collection Cube | Raster Cube created" << std::endl;
+
+    uint16_t count_chunks = icc->count_chunks();
+    std::cout << "count_chunks" << std::endl;
+    std::cout << count_chunks << std::endl;
+    icc->write_chunks_netcdf(output, "chunks", 0);
+    std::cout << "Write Chunks NetCDF" << std::endl;
+}
+
+void gdalcubes::write_single_chunk_netcdf(
+    std::string input = "./image_collection.db",
+    std::string output = "./single_chunk.nc",
+    chunkid_t chunk_id = 1) {
+    config::instance()->gdalcubes_init();
+
+    config::instance()->set_default_chunk_processor(std::dynamic_pointer_cast<chunk_processor>(std::make_shared<chunk_processor_multithread>(1)));
+
+    //    auto icc = image_collection_cube::create(input, cv);
+    auto icc = image_collection_cube::create(input);
+    std::cout << "Image Collection Cube | Raster Cube created" << std::endl;
+
+    uint16_t count_chunks = icc->count_chunks();
+    std::cout << "count_chunks" << std::endl;
+    std::cout << count_chunks << std::endl;
+    //    auto co = icc->chunk_coords_from_id(1);
+    ////    auto si = icc->chunk_size(1);
+    //    std::cout << "co" << std::endl;
+    //    std::cout << co.data() << std::endl;
+
+    //    for (uint32_t i=0; i<icc->count_chunks(); ++i) {
+    //        std::cout <<  std::endl <<  "CHUNK ID " << i << std::endl;
+    //        std::cout << "---------------------------------------------------------"<< std::endl;
+    //        std::shared_ptr<chunk_data> dat = icc->read_chunk(i);
+    //        if (!dat->empty()) {
+    //            std::cout << "IN" << std::endl;
+    //            uint32_t ncol = dat->size()[0];
+    //            uint32_t nrow = dat->size()[1];
+    //        }
+    //    }
+
+    icc->write_single_chunk_netcdf(chunk_id, output, 0);
+    std::cout << "Write Single NetCDF" << std::endl;
 }
 
 }  // namespace gdalcubes

@@ -15,9 +15,11 @@ class gdalcubes {
     static void gc_create_image_collection_from_format(std::vector<std::string> files,
                                                        std::string format_file,
                                                        std::string outfile);
-    static void gc_create_image_collection_from_format_test(std::string input, std::string output, std::string format);
+    static void gc_create_image_collection_from_format_all(std::string input, std::string output, std::string format);
 
     static void raster_cube(std::string input, std::string output);
+    static void write_chunks_netcdf(std::string input, std::string output, uint16_t nthreads);
+    static void write_single_chunk_netcdf(std::string input, std::string output, chunkid_t chunk_id);
 
     static std::vector<std::string> string_list_from_text_file(std::string filename);
 };

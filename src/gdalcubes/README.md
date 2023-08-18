@@ -126,7 +126,7 @@ gdalcubepy.gdalcubes.write_chunks_netcdf(
 gdalcubepy.gdalcubes.write_single_chunk_netcdf(
     f"{os.getcwd()}/Python/results/new_image_collection_from_file.db",
     f"Python/results/single_chunk.nc",
-    1
+    3
 )
 ```
 

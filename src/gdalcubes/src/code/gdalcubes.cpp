@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 
+#include "../apply_pixel.h"
 #include "../select_bands.h"
 
 namespace gdalcubes {
@@ -132,10 +133,15 @@ void gdalcubes::write_chunks_netcdf(
     auto icc = image_collection_cube::create(input);
     std::cout << "Image Collection Cube | Raster Cube created" << std::endl;
 
-    uint16_t count_chunks = icc->count_chunks();
+    auto ndvi = apply_pixel_cube::create(icc, {"(B04-B05)/(B04+B05)"});
+    //    auto cb = select_bands_cube::create(icc, std::vector<std::string>{"B04", "B05"});
+
+    //    uint16_t count_chunks = icc->count_chunks();
+    uint16_t count_chunks = ndvi->count_chunks();
     std::cout << "count_chunks" << std::endl;
     std::cout << count_chunks << std::endl;
-    icc->write_chunks_netcdf(output, "chunks", 0);
+    //    icc->write_chunks_netcdf(output, "chunks", 0);
+    ndvi->write_chunks_netcdf(output, "chunks", 0);
     std::cout << "Write Chunks NetCDF" << std::endl;
 }
 

@@ -106,11 +106,11 @@ if __name__ == '__main__':
     # TODO: Create data cube
     # create_datacube()
     # TODO: Create raster cube
-    create_raster_cube()
+    # create_raster_cube()
     # TODO: Write chunks
     write_chunks_netcdf()
     # TODO: Single chunks
-    write_single_netcdf()
+    # write_single_netcdf()
 
     show_data()
 

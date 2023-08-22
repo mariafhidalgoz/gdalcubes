@@ -158,45 +158,45 @@ install(DIRECTORY . DESTINATION include/gdalcubes
 file(GLOB TEST_FILES
         "test/*.cpp" "*.h")
 
-add_executable(gdalcubes_test ${TEST_FILES})
-target_link_libraries (gdalcubes_test libgdalcubes_shared)
+#add_executable( F ${TEST_FILES})
+#target_link_libraries (gdalcubes_test libgdalcubes_shared)
 
 
 find_package(Boost 1.58 COMPONENTS program_options system) # system is required for error codes
-if (Boost_FOUND)
-    message(STATUS "Found Boost libraries ${Boost_LIBRARIES}")
-
-
-    add_executable(gdalcubes ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
-    target_link_libraries (gdalcubes libgdalcubes_shared ${Boost_LIBRARIES})
-    install(TARGETS gdalcubes RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
-    target_include_directories(gdalcubes PRIVATE ${Boost_INCLUDE_DIRS})
-
-
-    add_executable(gdalcubes_example ${CMAKE_CURRENT_SOURCE_DIR}/example.cpp)
-    target_link_libraries (gdalcubes_example libgdalcubes_shared ${Boost_LIBRARIES})
-    target_include_directories(gdalcubes_example PRIVATE ${Boost_INCLUDE_DIRS})
-
-
-    find_library(CPPRESTSDK_LIB cpprest)
-    find_library(OPENSSL_LIB ssl)
-    find_library(CRYPTO_LIB crypto)
-    if (NOT CPPRESTSDK_LIB OR NOT OPENSSL_LIB OR NOT CRYPTO_LIB)
-        message(WARNING "Skipping build of gdalcubes_worker due to missing libraries.")
-    else ()
-        message(STATUS "cpprestsdk library found at ${CPPRESTSDK_LIB}")
-        message(STATUS "openssl library found at ${OPENSSL_LIB}")
-        message(STATUS "crypto library found at ${CRYPTO_LIB}")
-        add_executable(gdalcubes_server ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
-        target_link_libraries (gdalcubes_server libgdalcubes_shared ${CPPRESTSDK_LIB} ${OPENSSL_LIB} ${CRYPTO_LIB} ${Boost_LIBRARIES})
-        target_include_directories(gdalcubes_server PRIVATE ${Boost_INCLUDE_DIRS})
-        install(TARGETS gdalcubes_server RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
-    endif ()
-
-
-else ()
-    message(WARNING "Could not find Boost libraries, skipping build of gdalcubes_server and command line interface")
-endif ()
+#if (Boost_FOUND)
+#    message(STATUS "Found Boost libraries ${Boost_LIBRARIES}")
+#
+#
+#    add_executable(gdalcubes ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
+#    target_link_libraries (gdalcubes libgdalcubes_shared ${Boost_LIBRARIES})
+#    install(TARGETS gdalcubes RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
+#    target_include_directories(gdalcubes PRIVATE ${Boost_INCLUDE_DIRS})
+#
+#
+#    add_executable(gdalcubes_example ${CMAKE_CURRENT_SOURCE_DIR}/example.cpp)
+#    target_link_libraries (gdalcubes_example libgdalcubes_shared ${Boost_LIBRARIES})
+#    target_include_directories(gdalcubes_example PRIVATE ${Boost_INCLUDE_DIRS})
+#
+#
+#    find_library(CPPRESTSDK_LIB cpprest)
+#    find_library(OPENSSL_LIB ssl)
+#    find_library(CRYPTO_LIB crypto)
+#    if (NOT CPPRESTSDK_LIB OR NOT OPENSSL_LIB OR NOT CRYPTO_LIB)
+#        message(WARNING "Skipping build of gdalcubes_worker due to missing libraries.")
+#    else ()
+#        message(STATUS "cpprestsdk library found at ${CPPRESTSDK_LIB}")
+#        message(STATUS "openssl library found at ${OPENSSL_LIB}")
+#        message(STATUS "crypto library found at ${CRYPTO_LIB}")
+#        add_executable(gdalcubes_server ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
+#        target_link_libraries (gdalcubes_server libgdalcubes_shared ${CPPRESTSDK_LIB} ${OPENSSL_LIB} ${CRYPTO_LIB} ${Boost_LIBRARIES})
+#        target_include_directories(gdalcubes_server PRIVATE ${Boost_INCLUDE_DIRS})
+#        install(TARGETS gdalcubes_server RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
+#    endif ()
+#
+#
+#else ()
+#    message(WARNING "Could not find Boost libraries, skipping build of gdalcubes_server and command line interface")
+#endif ()
 
 
 

@@ -1,0 +1,28 @@
+FROM python:3.10
+MAINTAINER Maria Hidalgo <mhidalgo@uni-muenster.de>
+
+WORKDIR /app
+
+RUN apt-get update
+
+# Update C env vars so compiler can find gdal
+ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
+ENV C_INCLUDE_PATH=/usr/include/gdal
+# Install gdal
+RUN apt-get install -y libgdal-dev gdal-bin
+ENV GDAL_VERSION=3.6.2
+RUN pip install GDAL==$GDAL_VERSION
+
+# Install compiler
+RUN apt-get install -y cmake
+
+# Install Boost for c++ gdalcubes
+RUN apt-get install -y libboost-all-dev
+RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.gz
+RUN tar -xzf boost_1_83_0.tar.gz
+RUN cd boost_1_83_0 && ./bootstrap.sh --prefix=/usr/ && ./b2 install
+
+# Copy app
+COPY $PWD /opt/gdalcubes
+# Compile gdalcubespy
+RUN cd /opt/gdalcubes && mkdir -p build && cd build && cmake -DPYTHON_LIBRARY_DIR="/usr/local/lib/python3.10/site-packages" -DPYTHON_EXECUTABLE="/usr/local/bin/python3.10" -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release ../ && make -j 2 && make install

@@ -7855,6 +7855,11 @@ namespace Catch {
         const char* name;
     };
 
+    // https://stackoverflow.com/questions/71454588/minsigstksz-error-after-update-in-my-manjaro-linux
+    // https://sourceware.org/git/?p=glibc.git;a=blob;f=NEWS;h=85e84fe53699fe9e392edffa993612ce08b2954a;hb=HEAD
+    #undef MINSIGSTKSZ
+    #define MINSIGSTKSZ 16384
+
     // 32kb for the alternate stack seems to be sufficient. However, this value
     // is experimentally determined, so that's not guaranteed.
     constexpr static std::size_t sigStackSize = 32768 >= MINSIGSTKSZ ? 32768 : MINSIGSTKSZ;

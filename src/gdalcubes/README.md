@@ -134,3 +134,32 @@ Deactivate environment
 ```shell
 deactivate
 ```
+
+
+**Docker** 
+
+Build image
+```shell
+docker build -t gdalcubepy -f DockerfilePython .
+```
+
+Run container
+```shell
+docker run -t gdalcubepy
+```
+
+Activate environment
+```shell
+. /opt/gdalcubes/.venv/bin/activate
+```
+
+Test library in container
+```python
+import gdalcubepy
+```
+
+Push the image to Docker Hub
+```shell
+docker tag gdalcubepy mafehiza/gdalcubepy
+docker push mafehiza/gdalcubepy
+```

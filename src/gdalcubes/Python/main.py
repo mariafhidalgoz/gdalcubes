@@ -1,8 +1,10 @@
+import argparse
 import os
+import uuid
+from pathlib import Path
 
 import gdalcubepy
 import netCDF4
-import numpy as np
 
 
 def create_datacube_from_gdalcube_py():
@@ -30,48 +32,6 @@ def create_datacube_from_gdalcube_py():
     ic = gdalcubepy.image_collection()
     ic.create(cf, list_files, False)
     ic.write("./new_image_collection.db")
-
-
-def create_datacube() -> None:
-    os.chdir('../')
-    path = os.getcwd()
-    print(f"PWD: {path}")
-    # # Image Collection
-    # gdalcubepy.gdalcubes.gc_create_image_collection_from_format_all(
-    #     f"{os.getcwd()}/Python/L8_Amazon_mini/LC082290632016072901T1-SC20190715045704",
-    #     # f"{os.getcwd()}/Python/L8_Amazon_mini",
-    #     f"{os.getcwd()}/Python/results/new_image_collection.db",
-    #     f"{os.getcwd()}/formats/L8_SR.json")
-    # # Image Collection from file
-    gdalcubepy.gdalcubes.gc_create_image_collection_from_format_all(
-        f"{os.getcwd()}/Python/file_list.txt",
-        f"{os.getcwd()}/Python/results/new_image_collection_from_file.db",
-        f"{os.getcwd()}/formats/L8_SR.json")
-
-
-def create_raster_cube() -> None:
-    # Raster Cube
-    gdalcubepy.gdalcubes.raster_cube(
-        f"{os.getcwd()}/results/new_image_collection_from_file.db",
-        "results/complete_netcdf.nc")
-
-
-def write_chunks_netcdf() -> None:
-    # Write chunks netcdf
-    gdalcubepy.gdalcubes.write_chunks_netcdf(
-        f"{os.getcwd()}/results/new_image_collection_from_file.db",
-        "results/",
-        1
-    )
-
-
-def write_single_netcdf() -> None:
-    # Write single chunk netcdf
-    gdalcubepy.gdalcubes.write_single_chunk_netcdf(
-        f"{os.getcwd()}/results/new_image_collection_from_file.db",
-        f"{os.getcwd()}/results/single_chunk.nc",
-        1
-    )
 
 
 def show_data():
@@ -103,17 +63,57 @@ def show_data():
 
 if __name__ == '__main__':
 
-    # TODO: Create data cube
-    # create_datacube()
-    # TODO: Create raster cube
-    # create_raster_cube()
-    # TODO: Write chunks
-    write_chunks_netcdf()
-    # TODO: Single chunks
-    # write_single_netcdf()
+    # Current path
+    os.chdir('.')
+    # os.chdir('../')  # For Debug
+    path = os.getcwd()
+    print(f"PWD: {path}")
 
-    show_data()
+    # Creating a temporary directory with the task_id name
+    task_id = uuid.uuid4()
+    print('task_id: ' + str(task_id))
+    temp_folder = f"/tmp/{task_id}"
 
+    # Arguments
+    parser = argparse.ArgumentParser(description='Program to work with gdalcubes.')
+    parser.add_argument("-fn", "--format-name", default="L8_SR", help="Format name")
+    parser.add_argument("-cn", "--chunks-name", default="", help="Chunks name")
+    parser.add_argument("-src", "--source", default=f"{path}/Python/file_list.txt", help="Files folder or File list.")
+    # parser.add_argument("-src", "--source", default=f"{path}/Python/L8_Amazon_mini", help="Files folder or File list.")
+    parser.add_argument("-dest", "--destination", default=temp_folder, help="Destination location")
+    args = parser.parse_args()
+    format_name = args.format_name
+    chunks_name = args.chunks_name
+    files_src = args.source
+    print(f"files_src {files_src}")
+
+    # Define destination folder
+    if temp_folder == args.destination:
+        files_dest = temp_folder
+    else:
+        files_dest = args.destination
+    Path(files_dest).mkdir(parents=True, exist_ok=True)
+
+    # Create Image Collection from file
+    output_image_collection = f"{files_dest}/image_collection.db"
+    format_ic = f"{path}/formats/{format_name}.json"
+    gdalcubepy.gdalcubes.create_image_collection(files_src, output_image_collection, format_ic)
+
+    # Create cube
+    cube = gdalcubepy.gdalcubes.create_image_collection_cube(output_image_collection)
+
+    # Chunks number of a cube
+    total_chunks = gdalcubepy.gdalcubes.total_chunks(cube)
+
+    # Write single chunk netcdf
+    for chunk_id in range(total_chunks):
+        is_chunk_empty = gdalcubepy.gdalcubes.is_chunk_empty(cube, chunk_id)
+        print(f"Chunk Id {chunk_id} is empty {is_chunk_empty}.")
+        if not is_chunk_empty:
+            output_chunk = f"{files_dest}/{chunks_name}{chunk_id}.nc"
+            gdalcubepy.gdalcubes.write_single_chunk_netcdf(cube, output_chunk, chunk_id)
+
+    # show_data()
 
     # TODO: Pointers Error
     # create_datacube_from_gdalcube_py()

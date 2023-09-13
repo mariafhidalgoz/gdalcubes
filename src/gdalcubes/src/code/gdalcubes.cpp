@@ -12,7 +12,8 @@
 
 namespace gdalcubes {
 
-void gdalcubes::gc_create_image_collection_from_format(
+// TODO: This function is to test sending a list of files from python
+void gdalcubes::create_image_collection(
     std::vector<std::string> files,
     std::string format_file,
     std::string outfile) {
@@ -24,16 +25,14 @@ void gdalcubes::gc_create_image_collection_from_format(
     image_collection::create(cfmt, files)->write(outfile);
 }
 
-void gdalcubes::gc_create_image_collection_from_format_all(
+void gdalcubes::create_image_collection(
     std::string input = "./L8_Amazon_mini/LC082290632016072901T1-SC20190715045704",
     std::string output = "./new_image_collection.db",
     std::string format = "/Users/maria/GitHub/gdalcubes/src/gdalcubes/formats/L8_SR.json") {
     config::instance()->gdalcubes_init();
-    config::instance()->set_error_handler(error_handler::error_handler_debug);
-    std::cout << "GOOOO -> gc_create_image_collection_from_format_all" << std::endl;
 
     bool scan_archives = true;
-    bool recursive = false;
+    bool recursive = true;
     bool strict = false;
 
     std::vector<std::string> in;
@@ -78,7 +77,7 @@ void gdalcubes::gc_create_image_collection_from_format_all(
     std::cout << ic << std::endl;
 
     ic->write(output);
-    std::cout << ic->to_string() << std::endl;
+    std::cout << "Path: " << output << std::endl;
 }
 
 std::vector<std::string> gdalcubes::string_list_from_text_file(std::string filename) {
@@ -121,15 +120,36 @@ void gdalcubes::raster_cube(
     std::cout << "Write NetCDF" << std::endl;
 }
 
-void gdalcubes::write_chunks_netcdf(
-    std::string input = "./image_collection.db",
-    std::string output = "Python",
-    uint16_t nthreads = 1) {
+std::shared_ptr<image_collection_cube> gdalcubes::create_image_collection_cube(
+    std::string input = "./image_collection.db") {
     config::instance()->gdalcubes_init();
 
-    config::instance()->set_default_chunk_processor(std::dynamic_pointer_cast<chunk_processor>(std::make_shared<chunk_processor_multithread>(nthreads)));
+    auto icc = image_collection_cube::create(input);
+    std::cout << "Image Collection Cube | Raster Cube created" << std::endl;
+    return icc;
+}
 
-    //    auto icc = image_collection_cube::create(input, cv);
+int gdalcubes::total_chunks(std::shared_ptr<image_collection_cube> cube) {
+    uint16_t count_chunks = cube->count_chunks();
+    std::cout << "count_chunks" << std::endl;
+    std::cout << count_chunks << std::endl;
+    return count_chunks;
+}
+
+bool gdalcubes::is_chunk_empty(
+    std::shared_ptr<image_collection_cube> cube,
+    chunkid_t chunk_id = 1) {
+    config::instance()->gdalcubes_init();
+
+    auto chunk = cube->read_chunk(chunk_id);
+    return chunk->empty();
+}
+
+void gdalcubes::write_chunks_netcdf(
+    std::string input = "./image_collection.db",
+    std::string output = "Python") {
+    config::instance()->gdalcubes_init();
+
     auto icc = image_collection_cube::create(input);
     std::cout << "Image Collection Cube | Raster Cube created" << std::endl;
 
@@ -151,33 +171,60 @@ void gdalcubes::write_single_chunk_netcdf(
     chunkid_t chunk_id = 1) {
     config::instance()->gdalcubes_init();
 
-    config::instance()->set_default_chunk_processor(std::dynamic_pointer_cast<chunk_processor>(std::make_shared<chunk_processor_multithread>(1)));
-
-    //    auto icc = image_collection_cube::create(input, cv);
     auto icc = image_collection_cube::create(input);
     std::cout << "Image Collection Cube | Raster Cube created" << std::endl;
 
-    uint16_t count_chunks = icc->count_chunks();
-    std::cout << "count_chunks" << std::endl;
-    std::cout << count_chunks << std::endl;
-    //    auto co = icc->chunk_coords_from_id(1);
-    ////    auto si = icc->chunk_size(1);
-    //    std::cout << "co" << std::endl;
-    //    std::cout << co.data() << std::endl;
-
-    //    for (uint32_t i=0; i<icc->count_chunks(); ++i) {
-    //        std::cout <<  std::endl <<  "CHUNK ID " << i << std::endl;
-    //        std::cout << "---------------------------------------------------------"<< std::endl;
-    //        std::shared_ptr<chunk_data> dat = icc->read_chunk(i);
-    //        if (!dat->empty()) {
-    //            std::cout << "IN" << std::endl;
-    //            uint32_t ncol = dat->size()[0];
-    //            uint32_t nrow = dat->size()[1];
-    //        }
-    //    }
-
     icc->write_single_chunk_netcdf(chunk_id, output, 0);
     std::cout << "Write Single NetCDF" << std::endl;
+}
+
+void gdalcubes::write_single_chunk_netcdf(
+    std::shared_ptr<image_collection_cube> cube,
+    std::string output = "./single_chunk.nc",
+    chunkid_t chunk_id = 1) {
+    config::instance()->gdalcubes_init();
+
+    cube->write_single_chunk_netcdf(chunk_id, output, 0);
+    std::cout << "Write Single NetCDF" << std::endl;
+}
+
+// TODO: merge chunks when they are done
+void gdalcubes::merge_chunks(std::string work_dir = "") {
+    std::vector<std::pair<std::string, chunkid_t>> chunk_queue;
+    filesystem::iterate_directory(work_dir, [&chunk_queue](const std::string &f) {
+        // Consider files with name X.nc, where X is an integer number
+        // Temporary files will start with a dot and are NOT considered here
+        std::string basename = filesystem::stem(f) + "." + filesystem::extension(f);
+        std::size_t pos = basename.find(".nc");
+        if (pos > 0 && pos < std::string::npos) {
+            try {
+                int chunkid = std::stoi(basename.substr(0, pos));
+                chunk_queue.push_back(std::make_pair<>(f, chunkid));
+            } catch (...) {
+            }
+        }
+    });
+
+    for (auto it = chunk_queue.begin(); it != chunk_queue.end(); ++it) {
+        try {
+            std::cout << "Merging chunk " << std::to_string(it->second) << " from " << it->first << std::endl;
+            //            GCBS_DEBUG("Merging chunk " + std::to_string(it->second) + " from " + it->first);
+            std::shared_ptr<chunk_data> dat = std::make_shared<chunk_data>();
+            dat->read_ncdf(it->first);
+            //            f(it->second, dat, mutex);
+            //            filesystem::remove(it->first);
+
+            // for debugging only
+            // filesystem::move(it->first,it->first + "DONE.nc");
+
+        } catch (std::string s) {
+            GCBS_ERROR(s);
+            continue;
+        } catch (...) {
+            GCBS_ERROR("unexpected exception while processing chunk");
+            continue;
+        }
+    }
 }
 
 }  // namespace gdalcubes

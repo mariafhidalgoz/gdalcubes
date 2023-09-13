@@ -34,6 +34,15 @@ source .venv/bin/activate
 ```
 
 ```shell
+python Python/main.py -dest "/Users/maria/GitHub/gdalcubes/src/gdalcubes/Python/results/new_result"
+```
+
+```shell
+python Python/main.py -dest "/Users/maria/GitHub/gdalcubes/src/gdalcubes/Python/results/new_result" \
+    -src "/Users/maria/GitHub/gdalcubes/src/gdalcubes/Python/L8_Amazon_mini"
+```
+
+```shell
 python
 ```
 
@@ -100,34 +109,57 @@ icc = gdalcubepy.image_collection_cube(ic)
 
 ```python 
 import os
-
 import gdalcubepy
 
 # gdalcubes: Image Collection
-# gdalcubepy.gdalcubes.gc_create_image_collection_from_format_all(
-#     f"{os.getcwd()}/Python/L8_Amazon_mini/LC082290632016072901T1-SC20190715045704",
-#     f"{os.getcwd()}/Python/new_image_collection.db",
-#     f"{os.getcwd()}/formats/L8_SR.json")
-gdalcubepy.gdalcubes.gc_create_image_collection_from_format_all(
+# From a txt file
+gdalcubepy.gdalcubes.create_image_collection(
     f"{os.getcwd()}/Python/file_list.txt",
-    f"{os.getcwd()}/Python/results/new_image_collection_from_file.db",
+    f"{os.getcwd()}/Python/results/new_image_collection_from_txt_file.db",
     f"{os.getcwd()}/formats/L8_SR.json")
+# From folder
+gdalcubepy.gdalcubes.create_image_collection(
+    f"{os.getcwd()}/Python/L8_Amazon_mini",
+    f"{os.getcwd()}/Python/results/new_image_collection_from_folder.db",
+    f"{os.getcwd()}/formats/L8_SR.json")
+# List from txt file 
+gdalcubepy.gdalcubes.string_list_from_text_file(
+    f"{os.getcwd()}/Python/file_list.txt")
+
+
 # gdalcubes: Raster Cube
 gdalcubepy.gdalcubes.raster_cube(
-    f"{os.getcwd()}/Python/results/new_image_collection_from_file.db",
-    f"Python/results/complete_netcdf.nc")
+    f"{os.getcwd()}/Python/results/new_image_collection_from_folder.db",
+    f"Python/results/netcdf_180_images.nc")
+
+# Create cube
+cube = gdalcubepy.gdalcubes.create_image_collection_cube(
+    f"{os.getcwd()}/Python/results/new_image_collection_from_file.db")
+# Chunks number of a cube
+gdalcubepy.gdalcubes.total_chunks(cube)
+
 # Write chunks netcdf
 gdalcubepy.gdalcubes.write_chunks_netcdf(
     f"{os.getcwd()}/Python/results/new_image_collection_from_file.db",
-    "Python/results/",
-    1
+    "Python/results/"
 )
 # Write single chunk netcdf
+# From db file
 gdalcubepy.gdalcubes.write_single_chunk_netcdf(
     f"{os.getcwd()}/Python/results/new_image_collection_from_file.db",
-    f"Python/results/single_chunk.nc",
+    f"Python/results/single_chunk_3.nc",
     3
 )
+# From python cube
+gdalcubepy.gdalcubes.write_single_chunk_netcdf(
+    cube,
+    f"Python/results/single_chunk_3.nc",
+    3
+)
+
+# Merge chunks netcdf
+gdalcubepy.gdalcubes.merge_chunks(f"Python/results")
+
 ```
 
 Deactivate environment

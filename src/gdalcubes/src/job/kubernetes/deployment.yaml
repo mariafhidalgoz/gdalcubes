@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gdalcubepy-consumer
+spec:
+  selector:
+    matchLabels:
+      app: gdalcubepy-con
+  replicas: 2 # tells deployment to run 2 pods matching the template
+  template:
+    metadata:
+      labels:
+        app: gdalcubepy-con
+    spec:
+      containers:
+        - name: gdalcubepy-con
+          image: mafehiza/gdalcubepy-consumer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gdalcubepy-notification
+spec:
+  selector:
+    matchLabels:
+      app: gdalcubepy-not
+  replicas: 1 # tells deployment to run 2 pods matching the template
+  template:
+    metadata:
+      labels:
+        app: gdalcubepy-not
+    spec:
+      containers:
+        - name: gdalcubepy-not
+          image: mafehiza/gdalcubepy-notification

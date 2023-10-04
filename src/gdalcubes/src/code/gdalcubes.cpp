@@ -189,42 +189,48 @@ void gdalcubes::write_single_chunk_netcdf(
 }
 
 // TODO: merge chunks when they are done
-void gdalcubes::merge_chunks(std::string work_dir = "") {
-    std::vector<std::pair<std::string, chunkid_t>> chunk_queue;
-    filesystem::iterate_directory(work_dir, [&chunk_queue](const std::string &f) {
-        // Consider files with name X.nc, where X is an integer number
-        // Temporary files will start with a dot and are NOT considered here
-        std::string basename = filesystem::stem(f) + "." + filesystem::extension(f);
-        std::size_t pos = basename.find(".nc");
-        if (pos > 0 && pos < std::string::npos) {
-            try {
-                int chunkid = std::stoi(basename.substr(0, pos));
-                chunk_queue.push_back(std::make_pair<>(f, chunkid));
-            } catch (...) {
-            }
-        }
-    });
+void gdalcubes::merge_chunks(std::shared_ptr<image_collection_cube> cube, std::string work_dir = "") {
 
-    for (auto it = chunk_queue.begin(); it != chunk_queue.end(); ++it) {
-        try {
-            std::cout << "Merging chunk " << std::to_string(it->second) << " from " << it->first << std::endl;
-            //            GCBS_DEBUG("Merging chunk " + std::to_string(it->second) + " from " + it->first);
-            std::shared_ptr<chunk_data> dat = std::make_shared<chunk_data>();
-            dat->read_ncdf_full(it->first);
-            //            f(it->second, dat, mutex);
-            //            filesystem::remove(it->first);
+    config::instance()->set_default_chunk_processor(std::make_shared<chunk_processor_multithread>(2));
+    //    config::instance()->set_default_chunk_processor(std::dynamic_pointer_cast<chunk_processor>(std::make_shared<chunk_processor_multithread>(2)));
 
-            // for debugging only
-            // filesystem::move(it->first,it->first + "DONE.nc");
+    cube->write_netcdf_file(work_dir + "/result.nc");
 
-        } catch (std::string s) {
-            GCBS_ERROR(s);
-            continue;
-        } catch (...) {
-            GCBS_ERROR("unexpected exception while processing chunk");
-            continue;
-        }
-    }
+
+//    std::vector<std::pair<std::string, chunkid_t>> chunk_queue;
+//    filesystem::iterate_directory(work_dir, [&chunk_queue](const std::string &f) {
+//        // Consider files with name X.nc, where X is an integer number
+//        // Temporary files will start with a dot and are NOT considered here
+//        std::string basename = filesystem::stem(f) + "." + filesystem::extension(f);
+//        std::size_t pos = basename.find(".nc");
+//        if (pos > 0 && pos < std::string::npos) {
+//            try {
+//                int chunkid = std::stoi(basename.substr(0, pos));
+//                chunk_queue.push_back(std::make_pair<>(f, chunkid));
+//            } catch (...) {
+//            }
+//        }
+//    });
+//
+//    for (auto it = chunk_queue.begin(); it != chunk_queue.end(); ++it) {
+//        try {
+//            std::cout << "Merging chunk " << std::to_string(it->second) << " from " << it->first << std::endl;
+//            std::shared_ptr<chunk_data> dat = std::make_shared<chunk_data>();
+//            dat->read_ncdf_full(it->first);
+//            //            f(it->second, dat, mutex);
+//            //            filesystem::remove(it->first);
+//
+//            // for debugging only
+//            // filesystem::move(it->first,it->first + "DONE.nc");
+//
+//        } catch (std::string s) {
+//            GCBS_ERROR(s);
+//            continue;
+//        } catch (...) {
+//            GCBS_ERROR("unexpected exception while processing chunk");
+//            continue;
+//        }
+//    }
 }
 
 }  // namespace gdalcubes

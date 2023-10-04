@@ -758,6 +758,10 @@ void cube::write_png_collection(std::string dir, std::string prefix, std::vector
     prg->finalize();
 }
 
+//void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool with_VRT, bool write_bounds,
+//                             packed_export packing, bool drop_empty_slices, std::shared_ptr<chunk_processor> p) {
+//}
+
 void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool with_VRT, bool write_bounds,
                              packed_export packing, bool drop_empty_slices, std::shared_ptr<chunk_processor> p) {
     std::string op = filesystem::make_absolute(path);
@@ -1093,7 +1097,12 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
         if (dim_x_bnds) std::free(dim_x_bnds);
     }
 
+    std::cout << "write_netcdf_file | create ncdf" << std::endl;
+
     std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op, prg, &v_bands, ncout, &packing](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+
+        // 3. merge chunk to cube
+        std::cout << "write_netcdf_file | run function: Merge chunk to cube" << std::endl;
 
         // TODO: check if it is OK to simply not write anything to netCDF or if we need to fill dat explicity with no data values, check also for packed output
         if (!dat->empty()) {
@@ -1102,7 +1111,7 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
             std::size_t startp[] = {climits.low[0], climits.low[1], climits.low[2]};
             std::size_t countp[] = {csize[1], csize[2], csize[3]};
 
-            for (uint16_t i = 0; i < bands().count(); ++i) {
+            for (uint16_t i = 0; i < dat->bands().count(); ++i) {
                 if (packing.type != packed_export::packing_type::PACK_NONE) {
                     double cur_scale;
                     double cur_offset;
@@ -1735,27 +1744,71 @@ void chunk_processor_singlethread::apply(std::shared_ptr<cube> c,
 
 void chunk_processor_multithread::apply(std::shared_ptr<cube> c,
                                         std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f) {
+
+    std::cout << "chunk_processor_multithread | apply" << std::endl;
+
     std::mutex mutex;
-    std::vector<std::thread> workers;
-    for (uint16_t it = 0; it < _nthreads; ++it) {
-        workers.push_back(std::thread([this, &c, f, it, &mutex](void) {
-            for (uint32_t i = it; i < c->count_chunks(); i += _nthreads) {
-                try {
-                    std::shared_ptr<chunk_data> dat = c->read_chunk(i);
-                    f(i, dat, mutex);
-                } catch (std::string s) {
-                    GCBS_ERROR(s);
-                    continue;
-                } catch (...) {
-                    GCBS_ERROR("unexpected exception while processing chunk " + std::to_string(i));
-                    continue;
-                }
+    std::string work_dir = "Python/results/test3";
+
+    // 1. find .nc files ready
+    std::vector<std::pair<std::string, chunkid_t>> chunk_queue;
+    filesystem::iterate_directory(work_dir, [&chunk_queue](const std::string& f) {
+
+        // Consider files with name X.nc, where X is an integer number
+        // Temporary files will start with a dot and are NOT considered here
+        std::string basename  = filesystem::stem(f) + "." + filesystem::extension(f);
+        std::size_t pos = basename.find(".nc");
+        if (pos > 0 && pos < std::string::npos) {
+            try {
+                int chunkid = std::stoi(basename.substr(0,pos));
+                chunk_queue.push_back(std::make_pair<>(f, chunkid));
             }
-        }));
+            catch (...) {}
+        }
+    });
+
+    // 2. read list of .nc files ready
+    for (auto it = chunk_queue.begin(); it != chunk_queue.end(); ++it) {
+        try {
+            std::cout << "Merging chunk " << std::to_string(it->second) << " from " << it->first << std::endl;
+            std::shared_ptr<chunk_data> dat = std::make_shared<chunk_data>();
+            dat->read_ncdf_full(it->first);
+            f(it->second, dat, mutex);
+            // filesystem::remove(it->first);
+
+            // for debugging only
+             filesystem::move(it->first,it->first + "DONE.nc");
+
+        } catch (std::string s) {
+            GCBS_ERROR(s);
+            continue;
+        } catch (...) {
+            GCBS_ERROR("unexpected exception while processing chunk");
+            continue;
+        }
     }
-    for (uint16_t it = 0; it < _nthreads; ++it) {
-        workers[it].join();
-    }
+
+
+//    std::vector<std::thread> workers;
+//    for (uint16_t it = 0; it < _nthreads; ++it) {
+//        workers.push_back(std::thread([this, &c, f, it, &mutex](void) {
+//            for (uint32_t i = it; i < c->count_chunks(); i += _nthreads) {
+//                try {
+//                    std::shared_ptr<chunk_data> dat = c->read_chunk(i);
+//                    f(i, dat, mutex);
+//                } catch (std::string s) {
+//                    GCBS_ERROR(s);
+//                    continue;
+//                } catch (...) {
+//                    GCBS_ERROR("unexpected exception while processing chunk " + std::to_string(i));
+//                    continue;
+//                }
+//            }
+//        }));
+//    }
+//    for (uint16_t it = 0; it < _nthreads; ++it) {
+//        workers[it].join();
+//    }
 }
 
 

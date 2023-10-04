@@ -158,8 +158,12 @@ gcp.write_single_chunk_netcdf(
 )
 
 # Merge chunks netcdf
+import os
 from gdalcubepy import gdalcubes as gcp
-gcp.merge_chunks(f"Python/results/test3")
+cube = gcp.create_image_collection_cube(
+    f"{os.getcwd()}/Python/results/new_image_collection_from_txt_file.db")
+gcp.total_chunks(cube)
+gcp.merge_chunks(cube, f"Python/results/test3")
 
 ```
 

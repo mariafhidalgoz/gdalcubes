@@ -333,6 +333,14 @@ class chunk_data {
     inline uint16_t count_bands() { return _size[0]; }
 
     /**
+     * Get the cube's bands
+     * @return all bands of the cube object as band_collection
+     */
+    inline band_collection bands() {
+        return _bands;
+    }
+
+    /**
      * @brief Count the number of pixels in the chunk
      * @return number of pixels \f$(nx \times ny \times nt)\f$
      */

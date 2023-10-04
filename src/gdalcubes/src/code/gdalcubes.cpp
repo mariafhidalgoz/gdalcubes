@@ -210,7 +210,7 @@ void gdalcubes::merge_chunks(std::string work_dir = "") {
             std::cout << "Merging chunk " << std::to_string(it->second) << " from " << it->first << std::endl;
             //            GCBS_DEBUG("Merging chunk " + std::to_string(it->second) + " from " + it->first);
             std::shared_ptr<chunk_data> dat = std::make_shared<chunk_data>();
-            dat->read_ncdf(it->first);
+            dat->read_ncdf_full(it->first);
             //            f(it->second, dat, mutex);
             //            filesystem::remove(it->first);
 

@@ -426,10 +426,95 @@ class chunk_data {
      * @param path input path
      */
     void read_ncdf(std::string path);
+    void read_ncdf_full(std::string path);
+
+    /**
+     * @brief Derive the true size of a specific chunk
+     *
+     * The size may be different to the _chunk_size setting at the boundary regions.
+     * @return
+     */
+    coords_nd<uint32_t, 3> chunk_size() const {
+        bounds_nd<uint32_t, 3> vb = chunk_limits();
+        coords_nd<uint32_t, 3> out;
+        out[0] = vb.high[0] - vb.low[0] + 1;
+        out[1] = vb.high[1] - vb.low[1] + 1;
+        out[2] = vb.high[2] - vb.low[2] + 1;
+        return out;
+    };
+
+    /**
+     * @brief Calculate the limits of a given chunk
+     * @param id chunk id
+     * @return the limits in t,y, and x, as integer data cube coordinates
+     */
+    bounds_nd<uint32_t, 3> chunk_limits() const {
+        chunkid_t id = 0;
+        coords_nd<uint32_t, 3> out_vcoords_low;
+        coords_nd<uint32_t, 3> out_vcoords_high;
+
+        // Transform to global coordinates based on chunk id
+        uint32_t cumprod = 1;
+        int32_t n;
+
+        n = (uint32_t)std::ceil(((double)(_st_ref->nx())) / ((double)_chunk_size[2]));
+        out_vcoords_low[2] = (id / cumprod) % n;
+        out_vcoords_low[2] *= _chunk_size[2];
+        out_vcoords_high[2] = out_vcoords_low[2] + _chunk_size[2] - 1;
+        cumprod *= n;
+
+        n = (uint32_t)std::ceil(((double)(_st_ref->ny())) / ((double)_chunk_size[1]));
+        out_vcoords_low[1] = (id / cumprod) % n;
+        out_vcoords_low[1] *= _chunk_size[1];
+        out_vcoords_high[1] = out_vcoords_low[1] + _chunk_size[1] - 1;
+        cumprod *= n;
+
+        n = (uint32_t)std::ceil(((double)(_st_ref->nt())) / ((double)_chunk_size[0]));
+        out_vcoords_low[0] = (id / cumprod) % n;
+        out_vcoords_low[0] *= _chunk_size[0];
+        out_vcoords_high[0] = out_vcoords_low[0] + _chunk_size[0] - 1;
+        cumprod *= n;
+
+        // Shrink to view
+        if (out_vcoords_high[0] >= _st_ref->nt())
+            out_vcoords_high[0] = _st_ref->nt() - 1;
+        if (out_vcoords_low[0] >= _st_ref->nt())
+            out_vcoords_low[0] = _st_ref->nt() - 1;
+
+        if (out_vcoords_high[1] >= _st_ref->ny())
+            out_vcoords_high[1] = _st_ref->ny() - 1;
+        if (out_vcoords_low[1] >= _st_ref->ny())
+            out_vcoords_low[1] = _st_ref->ny() - 1;
+
+        if (out_vcoords_high[2] >= _st_ref->nx())
+            out_vcoords_high[2] = _st_ref->nx() - 1;
+        if (out_vcoords_low[2] >= _st_ref->nx())
+            out_vcoords_low[2] = _st_ref->nx() - 1;
+
+        bounds_nd<uint32_t, 3> out;
+        out.low = out_vcoords_low;
+        out.high = out_vcoords_high;
+        return out;
+    };
 
    private:
     void *_buf;
     chunk_size_btyx _size;
+
+    /**
+     * Spacetime reference of a cube, including extent, size, and projection
+     */
+    std::shared_ptr<cube_stref> _st_ref;  // TODO: replace with unique_ptr
+
+    /**
+     * @brief Size of chunks / number of cells per chunk in the order (datetime, y, x)
+     */
+    cube_size_tyx _chunk_size;
+
+    /**
+     * @brief The collection's bands
+     */
+    band_collection _bands;
 };
 
 /**

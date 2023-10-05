@@ -758,13 +758,524 @@ void cube::write_png_collection(std::string dir, std::string prefix, std::vector
     prg->finalize();
 }
 
-//void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool with_VRT, bool write_bounds,
-//                             packed_export packing, bool drop_empty_slices, std::shared_ptr<chunk_processor> p) {
-//}
-
 void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool with_VRT, bool write_bounds,
                              packed_export packing, bool drop_empty_slices, std::shared_ptr<chunk_processor> p) {
     std::string op = filesystem::make_absolute(path);
+
+    if (filesystem::is_directory(op)) {
+        throw std::string("ERROR in cube::write_netcdf_file(): output already exists and is a directory.");
+    }
+    if (filesystem::is_regular_file(op)) {
+        GCBS_INFO("Existing file '" + op + "' will be overwritten for NetCDF export");
+    }
+
+    if (!filesystem::exists(filesystem::parent(op))) {
+        filesystem::mkdir_recursive(filesystem::parent(op));
+    }
+
+    if (!_st_ref->has_regular_space()) {
+        throw std::string("ERROR: netCDF export currently does not support irregular spatial dimensions");
+    }
+
+    // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
+    std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
+
+    std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
+    prg->set(0);  // explicitly set to zero to show progress bar immediately
+
+    int ot = NC_DOUBLE;
+    if (packing.type != packed_export::packing_type::PACK_NONE) {
+        if (packing.type == packed_export::packing_type::PACK_UINT8) {
+            ot = NC_UBYTE;
+        } else if (packing.type == packed_export::packing_type::PACK_UINT16) {
+            ot = NC_USHORT;
+        } else if (packing.type == packed_export::packing_type::PACK_UINT32) {
+            ot = NC_UINT;
+        } else if (packing.type == packed_export::packing_type::PACK_INT16) {
+            ot = NC_SHORT;
+        } else if (packing.type == packed_export::packing_type::PACK_INT32) {
+            ot = NC_INT;
+        } else if (packing.type == packed_export::packing_type::PACK_FLOAT32) {
+            ot = NC_FLOAT;
+            packing.offset = {0.0};
+            packing.scale = {1.0};
+            packing.nodata = {std::numeric_limits<float>::quiet_NaN()};
+        }
+
+        if (!(packing.scale.size() == 1 || packing.scale.size() == size_bands())) {
+            std::string msg;
+            if (size_bands() == 1) {
+                msg = "Packed export needs exactly 1 scale and offset value.";
+            } else {
+                msg = "Packed export needs either n or 1 scale / offset values for n bands.";
+            }
+            GCBS_ERROR(msg);
+            throw(msg);
+        }
+        if (packing.scale.size() != packing.offset.size()) {
+            std::string msg = "Unequal number of scale and offset values provided for packed export.";
+            GCBS_ERROR(msg);
+            throw(msg);
+        }
+        if (packing.scale.size() != packing.nodata.size()) {
+            std::string msg = "Unequal number of scale and nodata values provided for packed export.";
+            GCBS_ERROR(msg);
+            throw(msg);
+        }
+    }
+
+    double *dim_x = (double *)std::calloc(size_x(), sizeof(double));
+    double *dim_y = (double *)std::calloc(size_y(), sizeof(double));
+    int *dim_t = (int *)std::calloc(size_t(), sizeof(int));
+
+    double *dim_x_bnds = nullptr;
+    double *dim_y_bnds = nullptr;
+    int *dim_t_bnds = nullptr;
+
+    if (write_bounds) {
+        dim_x_bnds = (double *)std::calloc(size_x() * 2, sizeof(double));
+        dim_y_bnds = (double *)std::calloc(size_y() * 2, sizeof(double));
+        dim_t_bnds = (int *)std::calloc(size_t() * 2, sizeof(int));
+    }
+
+    if (stref->dt().dt_unit == datetime_unit::WEEK) {
+        stref->dt_unit(datetime_unit::DAY);
+        stref->dt_interval(stref->dt_interval() * 7);  // UDUNIT does not support week
+    }
+
+    if (stref->has_regular_time()) {
+        for (uint32_t i = 0; i < size_t(); ++i) {
+            dim_t[i] = (i * stref->dt().dt_interval);
+        }
+    } else {
+        for (uint32_t i = 0; i < size_t(); ++i) {
+            dim_t[i] = (stref->datetime_at_index(i) - stref->t0()).dt_interval;
+        }
+    }
+
+    for (uint32_t i = 0; i < size_y(); ++i) {
+        //dim_y[i] = stref->win().bottom + size_y() * stref->dy() - (i + 0.5) * stref->dy();  // cell center
+        dim_y[i] = stref->win().top - (i + 0.5) * stref->dy();  // cell center
+    }
+    for (uint32_t i = 0; i < size_x(); ++i) {
+        dim_x[i] = stref->win().left + (i + 0.5) * stref->dx();
+    }
+
+    if (write_bounds) {
+        if (stref->has_regular_time()) {
+            for (uint32_t i = 0; i < size_t(); ++i) {
+                dim_t_bnds[2 * i] = (i * stref->dt().dt_interval);
+                dim_t_bnds[2 * i + 1] = ((i + 1) * stref->dt().dt_interval);
+            }
+        } else {
+            for (uint32_t i = 0; i < size_t(); ++i) {
+                dim_t_bnds[2 * i] = (stref->datetime_at_index(i) - stref->t0()).dt_interval;
+                dim_t_bnds[2 * i + 1] = dim_t_bnds[2 * i] + stref->dt_interval();
+            }
+        }
+
+        for (uint32_t i = 0; i < size_y(); ++i) {
+            // dim_y_bnds[2 * i] = stref->win().bottom + size_y() * stref->dy() - (i)*stref->dy();
+            // dim_y_bnds[2 * i + 1] = stref->win().bottom + size_y() * stref->dy() - (i + 1) * stref->dy();
+            dim_y_bnds[2 * i] = stref->win().top - (i)*stref->dy();
+            dim_y_bnds[2 * i + 1] = stref->win().top - (i + 1) * stref->dy();
+        }
+        for (uint32_t i = 0; i < size_x(); ++i) {
+            dim_x_bnds[2 * i] = stref->win().left + (i + 0) * stref->dx();
+            dim_x_bnds[2 * i + 1] = stref->win().left + (i + 1) * stref->dx();
+        }
+    }
+
+    OGRSpatialReference srs = st_reference()->srs_ogr();
+    std::string yname = srs.IsProjected() ? "y" : "latitude";
+    std::string xname = srs.IsProjected() ? "x" : "longitude";
+
+    int ncout;
+
+#if USE_NCDF4 == 1
+    nc_create(op.c_str(), NC_NETCDF4, &ncout);
+#else
+    nc_create(op.c_str(), NC_CLASSIC_MODEL, &ncout);
+#endif
+
+    int d_t, d_y, d_x;
+    nc_def_dim(ncout, "time", size_t(), &d_t);
+    nc_def_dim(ncout, yname.c_str(), size_y(), &d_y);
+    nc_def_dim(ncout, xname.c_str(), size_x(), &d_x);
+
+    int d_bnds = -1;
+    if (write_bounds) {
+        nc_def_dim(ncout, "nv", 2, &d_bnds);
+    }
+
+    int v_t, v_y, v_x;
+    nc_def_var(ncout, "time", NC_INT, 1, &d_t, &v_t);
+    nc_def_var(ncout, yname.c_str(), NC_DOUBLE, 1, &d_y, &v_y);
+    nc_def_var(ncout, xname.c_str(), NC_DOUBLE, 1, &d_x, &v_x);
+
+    int v_tbnds, v_ybnds, v_xbnds;
+    int d_tbnds[] = {d_t, d_bnds};
+    int d_ybnds[] = {d_y, d_bnds};
+    int d_xbnds[] = {d_x, d_bnds};
+    if (write_bounds) {
+        nc_def_var(ncout, "time_bnds", NC_INT, 2, d_tbnds, &v_tbnds);
+        nc_def_var(ncout, "y_bnds", NC_DOUBLE, 2, d_ybnds, &v_ybnds);
+        nc_def_var(ncout, "x_bnds", NC_DOUBLE, 2, d_xbnds, &v_xbnds);
+    }
+
+    std::string att_source = "gdalcubes " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH);
+
+    nc_put_att_text(ncout, NC_GLOBAL, "Conventions", std::strlen("CF-1.6"), "CF-1.6");
+    nc_put_att_text(ncout, NC_GLOBAL, "source", std::strlen(att_source.c_str()), att_source.c_str());
+
+    std::string att_t = stref->has_regular_time() ? "regular" : "labeled";
+    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_type", std::strlen(att_t.c_str()), att_t.c_str());
+    att_t = stref->t0().to_string();
+    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_t0", std::strlen(att_t.c_str()), att_t.c_str());
+    att_t = stref->t1().to_string();
+    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_t1", std::strlen(att_t.c_str()), att_t.c_str());
+    att_t = stref->dt().to_string();
+    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_dt", std::strlen(att_t.c_str()), att_t.c_str());
+
+    // write json graph as metadata
+    std::string j = make_constructible_json().dump();
+    nc_put_att_text(ncout, NC_GLOBAL, "process_graph", j.length(), j.c_str());
+
+    char *wkt;
+    srs.exportToWkt(&wkt);
+
+    //double geoloc_array[6] = {stref->left(), stref->dx(), 0.0, stref->top(), 0.0, stref->dy()};
+    std::string geoloc_array_str = utils::dbl_to_string(stref->left()) + " " + utils::dbl_to_string(stref->dx()) + " 0 " + utils::dbl_to_string(stref->top()) + " 0 " + utils::dbl_to_string(-stref->dy());
+    //nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", std::strlen(wkt), wkt);
+    //nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
+
+    std::string dtunit_str;
+    if (stref->dt().dt_unit == datetime_unit::YEAR) {
+        dtunit_str = "years";  // WARNING: UDUNITS defines a year as 365.2425 days
+    } else if (stref->dt().dt_unit == datetime_unit::MONTH) {
+        dtunit_str = "months";  // WARNING: UDUNITS defines a month as 1/12 year
+    } else if (stref->dt().dt_unit == datetime_unit::DAY) {
+        dtunit_str = "days";
+    } else if (stref->dt().dt_unit == datetime_unit::HOUR) {
+        dtunit_str = "hours";
+    } else if (stref->dt().dt_unit == datetime_unit::MINUTE) {
+        dtunit_str = "minutes";
+    } else if (stref->dt().dt_unit == datetime_unit::SECOND) {
+        dtunit_str = "seconds";
+    }
+    dtunit_str += " since ";
+    dtunit_str += stref->t0().to_string(datetime_unit::SECOND);
+
+    nc_put_att_text(ncout, v_t, "standard_name", std::strlen("time"), "time");
+    nc_put_att_text(ncout, v_t, "long_name", std::strlen("time"), "time");
+    nc_put_att_text(ncout, v_t, "units", std::strlen(dtunit_str.c_str()), dtunit_str.c_str());
+    nc_put_att_text(ncout, v_t, "calendar", std::strlen("gregorian"), "gregorian");
+    nc_put_att_text(ncout, v_t, "axis", std::strlen("T"), "T");  // this avoids GDAL warnings
+
+    if (srs.IsProjected()) {
+        // GetLinearUnits(char **) is deprecated since GDAL 2.3.0
+#if GDAL_VERSION_MAJOR > 2 || (GDAL_VERSION_MAJOR == 2 && GDAL_VERSION_MINOR >= 3)
+        const char *unit = nullptr;
+#else
+        char *unit = nullptr;
+#endif
+        srs.GetLinearUnits(&unit);
+
+        nc_put_att_text(ncout, v_y, "standard_name", std::strlen("projection_y_coordinate"), "projection_y_coordinate");
+        nc_put_att_text(ncout, v_y, "long_name", std::strlen("y coordinate of projection"), "y coordinate of projection");
+        nc_put_att_text(ncout, v_y, "units", std::strlen(unit), unit);
+        nc_put_att_text(ncout, v_y, "axis", std::strlen("Y"), "Y");
+        nc_put_att_text(ncout, v_x, "standard_name", std::strlen("projection_x_coordinate"), "projection_x_coordinate");
+        nc_put_att_text(ncout, v_x, "long_name", std::strlen("x coordinate of projection"), "x coordinate of projection");
+        nc_put_att_text(ncout, v_x, "units", std::strlen(unit), unit);
+        nc_put_att_text(ncout, v_x, "axis", std::strlen("X"), "X");
+
+        int v_crs;
+        nc_def_var(ncout, "crs", NC_CHAR, 0, NULL, &v_crs);
+        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", std::strlen("easting_northing"), "easting_northing");
+        nc_put_att_text(ncout, v_crs, "spatial_ref", std::strlen(wkt), wkt);
+        //nc_put_att_double(ncout, v_crs, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
+        nc_put_att_text(ncout, v_crs, "GeoTransform", std::strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
+
+    } else {
+        // char* unit;
+        // double scale = srs.GetAngularUnits(&unit);
+        nc_put_att_text(ncout, v_y, "units", std::strlen("degrees_north"), "degrees_north");
+        nc_put_att_text(ncout, v_y, "long_name", std::strlen("latitude"), "latitude");
+        nc_put_att_text(ncout, v_y, "standard_name", std::strlen("latitude"), "latitude");
+        nc_put_att_text(ncout, v_y, "axis", std::strlen("Y"), "Y");
+
+        nc_put_att_text(ncout, v_x, "units", std::strlen("degrees_east"), "degrees_east");
+        nc_put_att_text(ncout, v_x, "long_name", std::strlen("longitude"), "longitude");
+        nc_put_att_text(ncout, v_x, "standard_name", std::strlen("longitude"), "longitude");
+        nc_put_att_text(ncout, v_x, "axis", std::strlen("X"), "X");
+
+        int v_crs;
+        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", std::strlen("latitude_longitude"), "latitude_longitude");
+        //nc_put_att_text(ncout, v_crs, "crs_wkt", std::strlen(wkt), wkt);
+        nc_def_var(ncout, "crs", NC_CHAR, 0, NULL, &v_crs);
+        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", std::strlen("easting_northing"), "easting_northing");
+        nc_put_att_text(ncout, v_crs, "spatial_ref", std::strlen(wkt), wkt);
+        //nc_put_att_double(ncout, v_crs, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
+        nc_put_att_text(ncout, v_crs, "GeoTransform", std::strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
+    }
+    CPLFree(wkt);
+    int d_all[] = {d_t, d_y, d_x};
+
+    std::vector<int> v_bands;
+
+    for (uint16_t i = 0; i < bands().count(); ++i) {
+        int v;
+        nc_def_var(ncout, bands().get(i).name.c_str(), ot, 3, d_all, &v);
+        std::size_t csize[3] = {_chunk_size[0], _chunk_size[1], _chunk_size[2]};
+#if USE_NCDF4 == 1
+        nc_def_var_chunking(ncout, v, NC_CHUNKED, csize);
+#endif
+        if (compression_level > 0) {
+#if USE_NCDF4 == 1
+            nc_def_var_deflate(ncout, v, 1, 1, compression_level);  // TODO: experiment with shuffling
+#else
+            GCBS_WARN("gdalcubes has been built with support for netCDF-3 classic model only; compression will be ignored.");
+#endif
+        }
+
+        if (!bands().get(i).unit.empty())
+            nc_put_att_text(ncout, v, "units", std::strlen(bands().get(i).unit.c_str()), bands().get(i).unit.c_str());
+
+        double pscale = bands().get(i).scale;
+        double poff = bands().get(i).offset;
+        double pNAN = NAN;
+
+        if (packing.type != packed_export::packing_type::PACK_NONE) {
+            if (packing.scale.size() > 1) {
+                pscale = packing.scale[i];
+                poff = packing.offset[i];
+                pNAN = packing.nodata[i];
+            } else {
+                pscale = packing.scale[0];
+                poff = packing.offset[0];
+                pNAN = packing.nodata[0];
+            }
+        }
+
+        nc_put_att_double(ncout, v, "scale_factor", NC_DOUBLE, 1, &pscale);
+        nc_put_att_double(ncout, v, "add_offset", NC_DOUBLE, 1, &poff);
+        nc_put_att_text(ncout, v, "type", std::strlen(bands().get(i).type.c_str()), bands().get(i).type.c_str());
+        nc_put_att_text(ncout, v, "grid_mapping", std::strlen("crs"), "crs");
+
+        // this doesn't seem to solve missing spatial reference for multitemporal nc files
+        //        nc_put_att_text(ncout, v, "spatial_ref", std::strlen(wkt), wkt);
+        //        nc_put_att_double(ncout, v, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
+
+        nc_put_att_double(ncout, v, "_FillValue", ot, 1, &pNAN);
+
+        v_bands.push_back(v);
+    }
+
+    nc_enddef(ncout);  ////////////////////////////////////////////////////
+
+    nc_put_var(ncout, v_t, (void *)dim_t);
+    nc_put_var(ncout, v_y, (void *)dim_y);
+    nc_put_var(ncout, v_x, (void *)dim_x);
+
+    if (write_bounds) {
+        nc_put_var(ncout, v_tbnds, (void *)dim_t_bnds);
+        nc_put_var(ncout, v_ybnds, (void *)dim_y_bnds);
+        nc_put_var(ncout, v_xbnds, (void *)dim_x_bnds);
+    }
+
+    if (dim_t) std::free(dim_t);
+    if (dim_y) std::free(dim_y);
+    if (dim_x) std::free(dim_x);
+
+    if (write_bounds) {
+        if (dim_t_bnds) std::free(dim_t_bnds);
+        if (dim_y_bnds) std::free(dim_y_bnds);
+        if (dim_x_bnds) std::free(dim_x_bnds);
+    }
+
+    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op, prg, &v_bands, ncout, &packing](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+
+        // TODO: check if it is OK to simply not write anything to netCDF or if we need to fill dat explicity with no data values, check also for packed output
+        if (!dat->empty()) {
+            chunk_size_btyx csize = dat->size();
+            bounds_nd<uint32_t, 3> climits = chunk_limits(id);
+            std::size_t startp[] = {climits.low[0], climits.low[1], climits.low[2]};
+            std::size_t countp[] = {csize[1], csize[2], csize[3]};
+
+            for (uint16_t i = 0; i < bands().count(); ++i) {
+                if (packing.type != packed_export::packing_type::PACK_NONE) {
+                    double cur_scale;
+                    double cur_offset;
+                    double cur_nodata;
+                    if (packing.scale.size() == size_bands()) {
+                        cur_scale = packing.scale[i];
+                        cur_offset = packing.offset[i];
+                        cur_nodata = packing.nodata[i];
+                    } else {
+                        cur_scale = packing.scale[0];
+                        cur_offset = packing.offset[0];
+                        cur_nodata = packing.nodata[0];
+                    }
+
+                    /*
+                   * If band of cube already has scale + offset, we do not apply this before.
+                   * As a consequence, provided scale and offset values refer to actual data values
+                   * but ignore band metadata. The following commented code would apply the
+                   * unpacking before
+                     */
+                    /*
+                  if (bands().get(i).scale != 1 || bands().get(i).offset != 0) {
+                      for (uint32_t i = 0; i < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++i) {
+                          double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + i];
+                          v = v * bands().get(i).scale + bands().get(i).offset;
+                      }
+                  } */
+
+                    uint8_t *packedbuf = nullptr;
+
+                    if (packing.type == packed_export::packing_type::PACK_UINT8) {
+                        packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint8_t));
+                        for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                            double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                            if (std::isnan(v)) {
+                                v = cur_nodata;
+                            } else {
+                                v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                            }
+                            ((uint8_t *)(packedbuf))[iv] = v;
+                        }
+                        m.lock();
+                        nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                        m.unlock();
+                    } else if (packing.type == packed_export::packing_type::PACK_UINT16) {
+                        packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint16_t));
+                        for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                            double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                            if (std::isnan(v)) {
+                                v = cur_nodata;
+                            } else {
+                                v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                            }
+                            ((uint16_t *)(packedbuf))[iv] = v;
+                        }
+                        m.lock();
+                        nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                        m.unlock();
+                    } else if (packing.type == packed_export::packing_type::PACK_UINT32) {
+                        packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint32_t));
+                        for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                            double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                            if (std::isnan(v)) {
+                                v = cur_nodata;
+                            } else {
+                                v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                            }
+                            ((uint32_t *)(packedbuf))[iv] = v;
+                        }
+                        m.lock();
+                        nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                        m.unlock();
+                    } else if (packing.type == packed_export::packing_type::PACK_INT16) {
+                        packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(int16_t));
+                        for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                            double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                            if (std::isnan(v)) {
+                                v = cur_nodata;
+                            } else {
+                                v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                            }
+                            ((int16_t *)(packedbuf))[iv] = v;
+                        }
+                        m.lock();
+                        nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                        m.unlock();
+                    } else if (packing.type == packed_export::packing_type::PACK_INT32) {
+                        packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(int32_t));
+                        for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                            double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                            if (std::isnan(v)) {
+                                v = cur_nodata;
+                            } else {
+                                v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                            }
+                            ((int32_t *)(packedbuf))[iv] = v;
+                        }
+                        m.lock();
+                        nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                        m.unlock();
+                    } else if (packing.type == packed_export::packing_type::PACK_FLOAT32) {
+                        packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(float));
+                        for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                            double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                            ((float *)(packedbuf))[iv] = v;
+                        }
+                        m.lock();
+                        nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                        m.unlock();
+                    }
+                    if (packedbuf) std::free(packedbuf);
+                } else {
+                    m.lock();
+                    nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(((double *)dat->buf()) + (int)i * (int)csize[1] * (int)csize[2] * (int)csize[3]));
+                    m.unlock();
+                }
+            }
+        }
+        prg->increment((double)1 / (double)this->count_chunks());
+    };
+
+    p->apply(shared_from_this(), f);
+    nc_close(ncout);
+    prg->finalize();
+
+    // netCDF is now written, write additional per-time-slice VRT datasets if needed
+
+    if (with_VRT) {
+        for (uint32_t it = 0; it < size_t(); ++it) {
+            std::string dir = filesystem::directory(path);
+            std::string outfile = dir.empty() ? filesystem::stem(path) + +"_" + st_reference()->datetime_at_index(it).to_string() + ".vrt" : filesystem::join(dir, filesystem::stem(path) + "_" + st_reference()->datetime_at_index(it).to_string() + ".vrt");
+
+            std::ofstream fout(outfile);
+            fout << "<VRTDataset rasterXSize=\"" << size_x() << "\" rasterYSize=\"" << size_y() << "\">" << std::endl;
+            fout << "<SRS>" << st_reference()->srs() << "</SRS>" << std::endl;  // TODO: if SRS is WKT, it must be escaped with ampersand sequences
+            fout << "<GeoTransform>" << utils::dbl_to_string(st_reference()->left()) << ", " << utils::dbl_to_string(stref->dx()) << ", "
+                 << "0.0"
+                 << ", " << utils::dbl_to_string(stref->top()) << ", "
+                 << "0.0"
+                 << ", "
+                 << "-" << utils::dbl_to_string(stref->dy()) << "</GeoTransform>" << std::endl;
+
+            for (uint16_t ib = 0; ib < size_bands(); ++ib) {
+                fout << "<VRTRasterBand dataType=\"Float64\" band=\"" << ib + 1 << "\">" << std::endl;
+                fout << "<SimpleSource>" << std::endl;
+
+                fout << "<NoDataValue>" << std::stod(_bands.get(ib).no_data_value) << "</NoDataValue>" << std::endl;
+                fout << "<UnitType>" << _bands.get(ib).unit << "</UnitType>" << std::endl;
+                fout << "<Offset>" << _bands.get(ib).offset << "</Offset>" << std::endl;
+                fout << "<Scale>" << _bands.get(ib).scale << "</Scale>" << std::endl;
+
+                std::string in_dataset = "NETCDF:\"" + filesystem::filename(path) + "\":" + _bands.get(ib).name;
+                fout << "<SourceFilename relativeToVRT=\"1\">" << in_dataset << "</SourceFilename>" << std::endl;
+                fout << "<SourceBand>" << it + 1 << "</SourceBand>" << std::endl;
+                fout << "<SrcRect xOff=\"0\" yOff=\"0\" xSize=\"" << size_x() << "\" ySize=\"" << size_y() << "\"/>" << std::endl;
+                fout << "<DstRect xOff=\"0\" yOff=\"0\" xSize=\"" << size_x() << "\" ySize=\"" << size_y() << "\"/>" << std::endl;
+                fout << "</SimpleSource>" << std::endl;
+                fout << "</VRTRasterBand>" << std::endl;
+            }
+            fout << "</VRTDataset>" << std::endl;
+            fout.close();
+        }
+    }
+}
+
+void cube::write_chunks_kubernetes(
+    std::string path, std::string name,
+    uint8_t compression_level, bool with_VRT, bool write_bounds,
+    packed_export packing, bool drop_empty_slices,
+    std::shared_ptr<chunk_processor> p) {
+    std::string fpath = path + "/" + name + ".nc";
+    std::string op = filesystem::make_absolute(fpath);
     if (filesystem::is_directory(op)) {
         throw std::string("ERROR in cube::write_netcdf_file(): output already exists and is a directory.");
     }
@@ -1099,149 +1610,196 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
 
     std::cout << "write_netcdf_file | create ncdf" << std::endl;
 
-    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op, prg, &v_bands, ncout, &packing](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+    std::cout << "chunk_processor_multithread | apply" << std::endl;
 
-        // 3. merge chunk to cube
-        std::cout << "write_netcdf_file | run function: Merge chunk to cube" << std::endl;
+    std::mutex mutex;
+    std::string work_dir = path;
+    std::cout << "chunk_processor_multithread | work_dir" << work_dir<< std::endl;
 
-        // TODO: check if it is OK to simply not write anything to netCDF or if we need to fill dat explicity with no data values, check also for packed output
-        if (!dat->empty()) {
-            chunk_size_btyx csize = dat->size();
-            bounds_nd<uint32_t, 3> climits = chunk_limits(id);
-            std::size_t startp[] = {climits.low[0], climits.low[1], climits.low[2]};
-            std::size_t countp[] = {csize[1], csize[2], csize[3]};
+    // 1. find .nc files ready
+    std::vector<std::pair<std::string, chunkid_t>> chunk_queue;
+    filesystem::iterate_directory(work_dir, [&chunk_queue](const std::string& f) {
 
-            for (uint16_t i = 0; i < dat->bands().count(); ++i) {
-                if (packing.type != packed_export::packing_type::PACK_NONE) {
-                    double cur_scale;
-                    double cur_offset;
-                    double cur_nodata;
-                    if (packing.scale.size() == size_bands()) {
-                        cur_scale = packing.scale[i];
-                        cur_offset = packing.offset[i];
-                        cur_nodata = packing.nodata[i];
-                    } else {
-                        cur_scale = packing.scale[0];
-                        cur_offset = packing.offset[0];
-                        cur_nodata = packing.nodata[0];
-                    }
+        // Consider files with name X.nc, where X is an integer number
+        // Temporary files will start with a dot and are NOT considered here
+        std::string basename  = filesystem::stem(f) + "." + filesystem::extension(f);
+        std::size_t pos = basename.find(".nc");
+        if (pos > 0 && pos < std::string::npos) {
+            try {
+                int chunkid = std::stoi(basename.substr(0,pos));
+                chunk_queue.push_back(std::make_pair<>(f, chunkid));
+            }
+            catch (...) {}
+        }
+    });
 
-                    /*
+    // 2. read list of .nc files ready
+    for (auto it = chunk_queue.begin(); it != chunk_queue.end(); ++it) {
+        try {
+            std::cout << "Merging chunk " << std::to_string(it->second) << " from " << it->first << std::endl;
+            std::shared_ptr<chunk_data> dat = std::make_shared<chunk_data>();
+            dat->read_ncdf_full(it->first);
+            // f(it->second, dat, mutex);
+            chunkid_t id = it->second;
+            std::mutex &m = mutex;
+//            std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op, prg, &v_bands, ncout, &packing](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+
+                // 3. merge chunk to cube
+                std::cout << "write_netcdf_file | run function: Merge chunk to cube" << std::endl;
+
+                // TODO: check if it is OK to simply not write anything to netCDF or if we need to fill dat explicity with no data values, check also for packed output
+                if (!dat->empty()) {
+                    chunk_size_btyx csize = dat->size();
+                    bounds_nd<uint32_t, 3> climits = chunk_limits(id);
+                    std::size_t startp[] = {climits.low[0], climits.low[1], climits.low[2]};
+                    std::size_t countp[] = {csize[1], csize[2], csize[3]};
+
+                    for (uint16_t i = 0; i < dat->bands().count(); ++i) {
+                        if (packing.type != packed_export::packing_type::PACK_NONE) {
+                            double cur_scale;
+                            double cur_offset;
+                            double cur_nodata;
+                            if (packing.scale.size() == size_bands()) {
+                                cur_scale = packing.scale[i];
+                                cur_offset = packing.offset[i];
+                                cur_nodata = packing.nodata[i];
+                            } else {
+                                cur_scale = packing.scale[0];
+                                cur_offset = packing.offset[0];
+                                cur_nodata = packing.nodata[0];
+                            }
+
+                            /*
                    * If band of cube already has scale + offset, we do not apply this before.
                    * As a consequence, provided scale and offset values refer to actual data values
                    * but ignore band metadata. The following commented code would apply the
                    * unpacking before
-                     */
-                    /*
-                  if (bands().get(i).scale != 1 || bands().get(i).offset != 0) {
-                      for (uint32_t i = 0; i < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++i) {
-                          double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + i];
-                          v = v * bands().get(i).scale + bands().get(i).offset;
-                      }
-                  } */
+                             */
+                            /*
+                          if (bands().get(i).scale != 1 || bands().get(i).offset != 0) {
+                              for (uint32_t i = 0; i < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++i) {
+                                  double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + i];
+                                  v = v * bands().get(i).scale + bands().get(i).offset;
+                              }
+                          } */
 
-                    uint8_t *packedbuf = nullptr;
+                            uint8_t *packedbuf = nullptr;
 
-                    if (packing.type == packed_export::packing_type::PACK_UINT8) {
-                        packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint8_t));
-                        for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
-                            double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
-                            if (std::isnan(v)) {
-                                v = cur_nodata;
-                            } else {
-                                v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                            if (packing.type == packed_export::packing_type::PACK_UINT8) {
+                                packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint8_t));
+                                for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                                    double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                                    if (std::isnan(v)) {
+                                        v = cur_nodata;
+                                    } else {
+                                        v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                                    }
+                                    ((uint8_t *)(packedbuf))[iv] = v;
+                                }
+                                m.lock();
+                                nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                                m.unlock();
+                            } else if (packing.type == packed_export::packing_type::PACK_UINT16) {
+                                packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint16_t));
+                                for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                                    double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                                    if (std::isnan(v)) {
+                                        v = cur_nodata;
+                                    } else {
+                                        v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                                    }
+                                    ((uint16_t *)(packedbuf))[iv] = v;
+                                }
+                                m.lock();
+                                nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                                m.unlock();
+                            } else if (packing.type == packed_export::packing_type::PACK_UINT32) {
+                                packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint32_t));
+                                for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                                    double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                                    if (std::isnan(v)) {
+                                        v = cur_nodata;
+                                    } else {
+                                        v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                                    }
+                                    ((uint32_t *)(packedbuf))[iv] = v;
+                                }
+                                m.lock();
+                                nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                                m.unlock();
+                            } else if (packing.type == packed_export::packing_type::PACK_INT16) {
+                                packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(int16_t));
+                                for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                                    double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                                    if (std::isnan(v)) {
+                                        v = cur_nodata;
+                                    } else {
+                                        v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                                    }
+                                    ((int16_t *)(packedbuf))[iv] = v;
+                                }
+                                m.lock();
+                                nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                                m.unlock();
+                            } else if (packing.type == packed_export::packing_type::PACK_INT32) {
+                                packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(int32_t));
+                                for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                                    double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                                    if (std::isnan(v)) {
+                                        v = cur_nodata;
+                                    } else {
+                                        v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                                    }
+                                    ((int32_t *)(packedbuf))[iv] = v;
+                                }
+                                m.lock();
+                                nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                                m.unlock();
+                            } else if (packing.type == packed_export::packing_type::PACK_FLOAT32) {
+                                packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(float));
+                                for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                                    double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                                    ((float *)(packedbuf))[iv] = v;
+                                }
+                                m.lock();
+                                nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                                m.unlock();
                             }
-                            ((uint8_t *)(packedbuf))[iv] = v;
+                            if (packedbuf) std::free(packedbuf);
+                        } else {
+                            m.lock();
+                            nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(((double *)dat->buf()) + (int)i * (int)csize[1] * (int)csize[2] * (int)csize[3]));
+                            m.unlock();
                         }
-                        m.lock();
-                        nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
-                        m.unlock();
-                    } else if (packing.type == packed_export::packing_type::PACK_UINT16) {
-                        packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint16_t));
-                        for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
-                            double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
-                            if (std::isnan(v)) {
-                                v = cur_nodata;
-                            } else {
-                                v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
-                            }
-                            ((uint16_t *)(packedbuf))[iv] = v;
-                        }
-                        m.lock();
-                        nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
-                        m.unlock();
-                    } else if (packing.type == packed_export::packing_type::PACK_UINT32) {
-                        packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint32_t));
-                        for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
-                            double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
-                            if (std::isnan(v)) {
-                                v = cur_nodata;
-                            } else {
-                                v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
-                            }
-                            ((uint32_t *)(packedbuf))[iv] = v;
-                        }
-                        m.lock();
-                        nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
-                        m.unlock();
-                    } else if (packing.type == packed_export::packing_type::PACK_INT16) {
-                        packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(int16_t));
-                        for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
-                            double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
-                            if (std::isnan(v)) {
-                                v = cur_nodata;
-                            } else {
-                                v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
-                            }
-                            ((int16_t *)(packedbuf))[iv] = v;
-                        }
-                        m.lock();
-                        nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
-                        m.unlock();
-                    } else if (packing.type == packed_export::packing_type::PACK_INT32) {
-                        packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(int32_t));
-                        for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
-                            double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
-                            if (std::isnan(v)) {
-                                v = cur_nodata;
-                            } else {
-                                v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
-                            }
-                            ((int32_t *)(packedbuf))[iv] = v;
-                        }
-                        m.lock();
-                        nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
-                        m.unlock();
-                    } else if (packing.type == packed_export::packing_type::PACK_FLOAT32) {
-                        packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(float));
-                        for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
-                            double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
-                            ((float *)(packedbuf))[iv] = v;
-                        }
-                        m.lock();
-                        nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
-                        m.unlock();
                     }
-                    if (packedbuf) std::free(packedbuf);
-                } else {
-                    m.lock();
-                    nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(((double *)dat->buf()) + (int)i * (int)csize[1] * (int)csize[2] * (int)csize[3]));
-                    m.unlock();
                 }
-            }
-        }
-        prg->increment((double)1 / (double)this->count_chunks());
-    };
+                prg->increment((double)1 / (double)this->count_chunks());
+//            };
 
-    p->apply(shared_from_this(), f);
+            // filesystem::remove(it->first);
+
+            // for debugging only
+            filesystem::move(it->first,it->first + "DONE.nc");
+
+        } catch (std::string s) {
+            GCBS_ERROR(s);
+            continue;
+        } catch (...) {
+            GCBS_ERROR("unexpected exception while processing chunk");
+            continue;
+        }
+    }
+
+
+//    p->apply_2(shared_from_this(), f, filesystem::parent(op));
     nc_close(ncout);
     prg->finalize();
 
     // netCDF is now written, write additional per-time-slice VRT datasets if needed
     if (with_VRT) {
         for (uint32_t it = 0; it < size_t(); ++it) {
-            std::string dir = filesystem::directory(path);
-            std::string outfile = dir.empty() ? filesystem::stem(path) + +"_" + st_reference()->datetime_at_index(it).to_string() + ".vrt" : filesystem::join(dir, filesystem::stem(path) + "_" + st_reference()->datetime_at_index(it).to_string() + ".vrt");
+            std::string dir = filesystem::directory(fpath);
+            std::string outfile = dir.empty() ? filesystem::stem(fpath) + +"_" + st_reference()->datetime_at_index(it).to_string() + ".vrt" : filesystem::join(dir, filesystem::stem(fpath) + "_" + st_reference()->datetime_at_index(it).to_string() + ".vrt");
 
             std::ofstream fout(outfile);
             fout << "<VRTDataset rasterXSize=\"" << size_x() << "\" rasterYSize=\"" << size_y() << "\">" << std::endl;
@@ -1262,7 +1820,7 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
                 fout << "<Offset>" << _bands.get(ib).offset << "</Offset>" << std::endl;
                 fout << "<Scale>" << _bands.get(ib).scale << "</Scale>" << std::endl;
 
-                std::string in_dataset = "NETCDF:\"" + filesystem::filename(path) + "\":" + _bands.get(ib).name;
+                std::string in_dataset = "NETCDF:\"" + filesystem::filename(fpath) + "\":" + _bands.get(ib).name;
                 fout << "<SourceFilename relativeToVRT=\"1\">" << in_dataset << "</SourceFilename>" << std::endl;
                 fout << "<SourceBand>" << it + 1 << "</SourceBand>" << std::endl;
                 fout << "<SrcRect xOff=\"0\" yOff=\"0\" xSize=\"" << size_x() << "\" ySize=\"" << size_y() << "\"/>" << std::endl;
@@ -1742,13 +2300,45 @@ void chunk_processor_singlethread::apply(std::shared_ptr<cube> c,
     }
 }
 
+void chunk_processor_singlethread::apply_2(std::shared_ptr<cube> c,
+                                           std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f,
+                                           std::string work_dir) {
+
+}
+
 void chunk_processor_multithread::apply(std::shared_ptr<cube> c,
                                         std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f) {
+    std::mutex mutex;
+    std::vector<std::thread> workers;
+    for (uint16_t it = 0; it < _nthreads; ++it) {
+        workers.push_back(std::thread([this, &c, f, it, &mutex](void) {
+            for (uint32_t i = it; i < c->count_chunks(); i += _nthreads) {
+                try {
+                    std::shared_ptr<chunk_data> dat = c->read_chunk(i);
+                    f(i, dat, mutex);
+                } catch (std::string s) {
+                    GCBS_ERROR(s);
+                    continue;
+                } catch (...) {
+                    GCBS_ERROR("unexpected exception while processing chunk " + std::to_string(i));
+                    continue;
+                }
+            }
+        }));
+    }
+    for (uint16_t it = 0; it < _nthreads; ++it) {
+        workers[it].join();
+    }
+}
+
+void chunk_processor_multithread::apply_2(std::shared_ptr<cube> c,
+                                          std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f,
+                                          std::string work_dir) {
 
     std::cout << "chunk_processor_multithread | apply" << std::endl;
 
     std::mutex mutex;
-    std::string work_dir = "Python/results/test3";
+//    std::string work_dir = "Python/results/test3";
 
     // 1. find .nc files ready
     std::vector<std::pair<std::string, chunkid_t>> chunk_queue;
@@ -1788,29 +2378,7 @@ void chunk_processor_multithread::apply(std::shared_ptr<cube> c,
         }
     }
 
-
-//    std::vector<std::thread> workers;
-//    for (uint16_t it = 0; it < _nthreads; ++it) {
-//        workers.push_back(std::thread([this, &c, f, it, &mutex](void) {
-//            for (uint32_t i = it; i < c->count_chunks(); i += _nthreads) {
-//                try {
-//                    std::shared_ptr<chunk_data> dat = c->read_chunk(i);
-//                    f(i, dat, mutex);
-//                } catch (std::string s) {
-//                    GCBS_ERROR(s);
-//                    continue;
-//                } catch (...) {
-//                    GCBS_ERROR("unexpected exception while processing chunk " + std::to_string(i));
-//                    continue;
-//                }
-//            }
-//        }));
-//    }
-//    for (uint16_t it = 0; it < _nthreads; ++it) {
-//        workers[it].join();
-//    }
 }
-
 
 std::shared_ptr<chunk_data> cube::to_double_array(std::shared_ptr<chunk_processor> p) {
 

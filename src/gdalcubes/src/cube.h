@@ -175,6 +175,8 @@ class chunk_processor {
      */
     virtual void
     apply(std::shared_ptr<cube> c, std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f) = 0;
+
+    void apply_2(std::shared_ptr<cube> c, std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f);
 };
 
 /**
@@ -194,6 +196,12 @@ class chunk_processor_singlethread : public chunk_processor {
      */
     void apply(std::shared_ptr<cube> c,
                std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f) override;
+    /**
+     * @copydoc chunk_processor::apply
+     */
+    void apply_2(std::shared_ptr<cube> c,
+                 std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f,
+                 std::string work_dir);
 };
 
 /**
@@ -219,6 +227,13 @@ class chunk_processor_multithread : public chunk_processor {
     */
     void apply(std::shared_ptr<cube> c,
                std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f) override;
+
+    /**
+    * @copydoc chunk_processor::apply
+    */
+    void apply_2(std::shared_ptr<cube> c,
+                 std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f,
+                 std::string work_dir);
 
     /**
      * Query the number of threads to be used in parallel chunk processing
@@ -913,6 +928,11 @@ class cube : public std::enable_shared_from_this<cube> {
                            bool with_VRT = false, bool write_bounds = true, packed_export packing = packed_export::make_none(),
                            bool drop_empty_slices = false,
                            std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
+
+    void write_chunks_kubernetes(std::string path, std::string name, uint8_t compression_level = 0,
+                                 bool with_VRT = false, bool write_bounds = true, packed_export packing = packed_export::make_none(),
+                                 bool drop_empty_slices = false,
+                                 std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     void write_chunks_netcdf(std::string dir, std::string name = "", uint8_t compression_level = 0,
                              std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());

@@ -163,7 +163,7 @@ from gdalcubepy import gdalcubes as gcp
 cube = gcp.create_image_collection_cube(
     f"{os.getcwd()}/Python/results/new_image_collection_from_txt_file.db")
 gcp.total_chunks(cube)
-gcp.merge_chunks(cube, f"Python/results/test3")
+gcp.merge_chunks(cube, f"Python/results/test3", "result")
 
 ```
 

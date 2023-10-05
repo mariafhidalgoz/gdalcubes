@@ -43,7 +43,7 @@ class gdalcubes {
         std::string output,
         chunkid_t chunk_id);
 
-    static void merge_chunks(std::shared_ptr<image_collection_cube> cube, std::string work_dir);
+    static void merge_chunks(std::shared_ptr<image_collection_cube> cube, std::string work_dir = "", std::string file_name = "result");
 };
 }  // namespace gdalcubes
 

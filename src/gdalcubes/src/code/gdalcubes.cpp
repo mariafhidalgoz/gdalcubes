@@ -189,12 +189,12 @@ void gdalcubes::write_single_chunk_netcdf(
 }
 
 // TODO: merge chunks when they are done
-void gdalcubes::merge_chunks(std::shared_ptr<image_collection_cube> cube, std::string work_dir = "") {
+void gdalcubes::merge_chunks(std::shared_ptr<image_collection_cube> cube, std::string work_dir, std::string file_name) {
 
     config::instance()->set_default_chunk_processor(std::make_shared<chunk_processor_multithread>(2));
     //    config::instance()->set_default_chunk_processor(std::dynamic_pointer_cast<chunk_processor>(std::make_shared<chunk_processor_multithread>(2)));
 
-    cube->write_netcdf_file(work_dir + "/result.nc");
+    cube->write_chunks_kubernetes(work_dir, file_name);
 
 
 //    std::vector<std::pair<std::string, chunkid_t>> chunk_queue;

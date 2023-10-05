@@ -67,8 +67,9 @@ void init_gdalcubes(py::module &m) {
                     py::arg("chunk_id"))
 
         .def_static("merge_chunks",
-                    py::overload_cast<std::shared_ptr<gdalcubes::image_collection_cube>, std::string>(
+                    py::overload_cast<std::shared_ptr<gdalcubes::image_collection_cube>, std::string, std::string>(
                         &gdalcubes::gdalcubes::merge_chunks),
                     py::arg("cube"),
-                    py::arg("work_dir"));
+                    py::arg("work_dir"),
+                    py::arg("file_name"));
 }

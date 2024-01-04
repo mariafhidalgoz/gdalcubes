@@ -36,3 +36,12 @@ spec:
               value: "INTERNAL"
             - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
               value: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
+          resources:
+            limits:
+              memory: 128Mi
+              cpu: 500m
+              ephemeral-storage: 500Mi
+            requests:
+              memory: 128Mi
+              cpu: 250m
+              ephemeral-storage: 500Mi

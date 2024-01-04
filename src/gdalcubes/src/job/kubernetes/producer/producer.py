@@ -1,34 +1,16 @@
 # Creating the producer
 import argparse
 import json
-import logging
 import os
 import time
 import uuid
 from enum import Enum
-from pathlib import Path
 
 from kafka import KafkaProducer
 
 GDALCUBESPY_NOTIFICATIONS_KAFKA_TOPIC = "gdalcubespy-notifications"
 
-producer = KafkaProducer(
-    bootstrap_servers="kafka-local.gdalcubepy-kafka.svc.cluster.local:9092",
-    api_version=(0, 10, 1),
-    security_protocol="SASL_PLAINTEXT",
-    sasl_mechanism="SCRAM-SHA-256",
-    sasl_plain_username="user1",
-    sasl_plain_password="LMEUBwcFP0"
-)
-
-# conf = {
-#     'bootstrap.servers': "kafka-local.gdalcubepy-kafka.svc.cluster.local:9092",
-#     'sasl.mechanisms': "SCRAM-SHA-256",
-#     'security.protocol': "SASL_PLAINTEXT",
-#     'sasl.username': "user1",
-#     'sasl.password': "LMEUBwcFP0"
-# }
-# consumer = Producer(conf)
+producer = KafkaProducer(bootstrap_servers="kafka:9092")
 
 
 class Producers(Enum):
@@ -80,9 +62,11 @@ if __name__ == '__main__':
             current_path=path,
         )
     )
-    
+
     # send messages to kafka topic
     producer.send(GDALCUBESPY_NOTIFICATIONS_KAFKA_TOPIC, json.dumps(data).encode("utf-8"))
-    logging.info(f"Producer | Done sending process ...{data}")
+    print(f"Producer | Done sending process ...{data}")
 
-    time.sleep(1)
+    # time.sleep(1)
+    while True:
+        time.sleep(60)

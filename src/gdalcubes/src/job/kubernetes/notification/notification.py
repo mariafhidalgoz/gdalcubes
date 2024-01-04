@@ -11,22 +11,12 @@ GDALCUBESPY_NOTIFICATIONS_KAFKA_TOPIC = "gdalcubespy-notifications"
 GDALCUBESPY_CONSUMER_KAFKA_TOPIC = "write-netcdf"
 
 producer = KafkaProducer(
-    bootstrap_servers="kafka-local.gdalcubepy-kafka.svc.cluster.local:9092",
-    api_version=(0, 10, 1),
-    security_protocol="SASL_PLAINTEXT",
-    sasl_mechanism="SCRAM-SHA-256",
-    sasl_plain_username="user1",
-    sasl_plain_password="LMEUBwcFP0"
+    bootstrap_servers="kafka:9092"
 )
 
 consumer = KafkaConsumer(
     GDALCUBESPY_NOTIFICATIONS_KAFKA_TOPIC,
-    bootstrap_servers="kafka-local.gdalcubepy-kafka.svc.cluster.local:9092",
-    api_version=(0, 10, 1),
-    security_protocol="SASL_PLAINTEXT",
-    sasl_mechanism="SCRAM-SHA-256",
-    sasl_plain_username="user1",
-    sasl_plain_password="LMEUBwcFP0"
+    bootstrap_servers="kafka:9092",
 )
 
 class Producers(Enum):

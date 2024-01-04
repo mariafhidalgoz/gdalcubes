@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: initial-task
+  labels:
+    app: send-chunks
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: send-chunks
+  template:
+    metadata:
+      labels:
+        app: send-chunks
+    spec:
+      containers:
+        - name: send-chunks
+          image: mafehiza/gdalcubepy-producer-2

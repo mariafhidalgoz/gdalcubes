@@ -22,26 +22,17 @@ spec:
             - containerPort: 9093
               name: kafka-external
           command: ["/bin/sh"]
-          args: ["-c", "BROKER_ID=${POD_NAME##*-} KAFKA_ADVERTISED_LISTENERS=EXTERNAL://localhost:3000${POD_NAME##*-},INTERNAL://$(POD_NAME).kafka.default.svc:9092 /docker-entrypoint.sh start"]
+          args: ["-c", "BROKER_ID=${POD_NAME##*-} KAFKA_ADVERTISED_LISTENERS=EXTERNAL://localhost:3000${POD_NAME##*-},INTERNAL://$(POD_NAME).kafka.kafka.svc:9092 /docker-entrypoint.sh start"]
           env:
             - name: POD_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
             - name: ZOOKEEPER_CONNECT
-              value: "zookeeper.default.svc:2181"
+              value: "zookeeper.kafka.svc:2181"
             - name: KAFKA_LISTENERS
               value: "EXTERNAL://:9093,INTERNAL://:9092"
             - name: KAFKA_INTER_BROKER_LISTENER_NAME
               value: "INTERNAL"
             - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
               value: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
-          resources:
-            limits:
-              memory: 128Mi
-              cpu: 500m
-              ephemeral-storage: 500Mi
-            requests:
-              memory: 128Mi
-              cpu: 250m
-              ephemeral-storage: 500Mi

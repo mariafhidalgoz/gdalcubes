@@ -192,13 +192,14 @@ kubectl create namespace gdalcubepy-kafka
 ```
 
 1. Change context
+Get current context
 ```shell
 kubectl config get-contexts
 ```
-Get current context
 ```shell
 kubectl config current-context
 ```
+Set context
 ```shell
 kubectl config set-context --current --namespace=gdalcubepy-kafka
 ```
@@ -210,17 +211,32 @@ kubectl config set-context $(kubectl config current-context) --namespace=gdalcub
 ### Install kafka
 ```shell
 helm repo add bitnami https://charts.bitnami.com/bitnami
+```
 
+Install custom kafka service (This will create the controller pods)
+```shell
 helm install gdalcubepy-kafka bitnami/kafka \
 --set persistence.enabled=false,zookeeper.persistence.enabled=false
+```
 
+Uninstall custom kafka service (This will delete the controller pods)
+```shell
 helm uninstall gdalcubepy-kafka
+```
 
+List of services (This list the kafka service)
+```shell
 helm list
+```
 
-kubectl delete pod kafka-local-client --namespace gdalcubepy-kafka
+Delete kafka client pod
+```shell
+kubectl delete pod gdalcubepy-kafka-client --namespace gdalcubepy-kafka
+```
 
-kubectl run kafka-local-client \
+Create kafka client pod
+```shell
+kubectl run gdalcubepy-kafka-client \
     --restart='Never' \
     --image docker.io/bitnami/kafka:3.5.1-debian-11-r35 \
     --namespace gdalcubepy-kafka \
@@ -233,15 +249,18 @@ kubectl run kafka-local-client \
 
 1. Create `'client.properties'` file.
 2. Copy file to kafka container.
-   kubectl cp --namespace gdalcubepy-kafka /path/to/client.properties kafka-local-client:/tmp/client.properties
+   kubectl cp --namespace gdalcubepy-kafka /path/to/client.properties gdalcubepy-kafka-client:/tmp/client.properties
 ```shell
-kubectl cp --namespace gdalcubepy-kafka client.properties kafka-local-client:/tmp/client.properties
+kubectl cp --namespace gdalcubepy-kafka client.properties gdalcubepy-kafka-client:/tmp/client.properties
 ```
 
 1. Test producer
 Enter to the container
 ```shell
-kubectl exec --tty -i kafka-local-client --namespace gdalcubepy-kafka -- bash
+kubectl exec --tty -i gdalcubepy-kafka-client --namespace gdalcubepy-kafka -- bash
+```
+```shell
+opt/bitnami/kafka/bin/kafka-topics.sh
 ```
 ```shell
 opt/bitnami/kafka/bin/kafka-console-producer.sh \
@@ -253,7 +272,7 @@ opt/bitnami/kafka/bin/kafka-console-producer.sh \
 1. Test consumer
    Enter to the container
 ```shell
-kubectl exec --tty -i kafka-local-client --namespace gdalcubepy-kafka -- bash
+kubectl exec --tty -i gdalcubepy-kafka-client --namespace gdalcubepy-kafka -- bash
 ```
 ```shell
 opt/bitnami/kafka/bin/kafka-console-consumer.sh \
@@ -265,7 +284,7 @@ opt/bitnami/kafka/bin/kafka-console-consumer.sh \
 
 ### Get kafka version
 ```shell
-kubectl exec --tty -i kafka-local-client --namespace gdalcubepy-kafka -- bash
+kubectl exec --tty -i gdalcubepy-kafka-client --namespace gdalcubepy-kafka -- bash
 ```
 ```shell
 opt/bitnami/kafka/bin/kafka-topics.sh --version
@@ -299,6 +318,26 @@ kubectl run send-chunks --rm --tty -i \
 --command \
 -- python3 -u ./producer.py
 
+
+kubectl run gcpy-consumer --rm --tty -i \
+--image mafehiza/gdalcubepy-consumer \
+--restart Never \
+--namespace gdalcubepy-kafka \
+--command \
+-- python3 -u ./consumer.py
+
+kubectl run gcpy-notification --rm --tty -i \
+--image mafehiza/gdalcubepy-notification \
+--restart Never \
+--namespace gdalcubepy-kafka \
+--command \
+-- python3 -u ./notification.py
+
+kubectl run send-chunks --rm --tty -i \
+--image mafehiza/gdalcubepy-producer \
+--restart Never \
+--command \
+-- python3 -u ./producer.py
 
 
 ## Updated deployments & send messages

@@ -2,14 +2,11 @@
 # Creating the producer to notify the status of the process
 import json
 import logging
-import os
 from enum import Enum
 from pathlib import Path
 
-from kafka import KafkaConsumer, KafkaProducer
-
 import gdalcubepy
-
+from kafka import KafkaConsumer, KafkaProducer
 
 logging.basicConfig(level=logging.INFO)
 
@@ -17,23 +14,14 @@ GDALCUBESPY_NOTIFICATIONS_KAFKA_TOPIC = "gdalcubespy-notifications"
 GDALCUBESPY_CONSUMER_KAFKA_TOPIC = "write-netcdf"
 
 producer = KafkaProducer(
-    bootstrap_servers="kafka-local.gdalcubepy-kafka.svc.cluster.local:9092",
-    api_version=(0, 10, 1),
-    security_protocol="SASL_PLAINTEXT",
-    sasl_mechanism="SCRAM-SHA-256",
-    sasl_plain_username="user1",
-    sasl_plain_password="LMEUBwcFP0"
+    bootstrap_servers="kafka:9092"
 )
 
 consumer = KafkaConsumer(
     GDALCUBESPY_CONSUMER_KAFKA_TOPIC,
-    bootstrap_servers="kafka-local.gdalcubepy-kafka.svc.cluster.local:9092",
-    api_version=(0, 10, 1),
-    security_protocol="SASL_PLAINTEXT",
-    sasl_mechanism="SCRAM-SHA-256",
-    sasl_plain_username="user1",
-    sasl_plain_password="LMEUBwcFP0"
+    bootstrap_servers="kafka:9092"
 )
+
 
 class Producers(Enum):
     CREATE_IMAGE_COLLECTION = 1
@@ -42,7 +30,7 @@ class Producers(Enum):
 
 
 if __name__ == '__main__':
-    set_processed= dict()
+    set_processed = dict()
     logging.info("Consumer | Started chunks processor...")
     while True:
         for message in consumer:
@@ -57,11 +45,11 @@ if __name__ == '__main__':
             if state == 1:
                 logging.info("Consumer | Creating Image Collection...")
                 create_cube = consumed_message["create_cube"]
-                format_name=create_cube['format_name']
-                chunks_name=create_cube['chunks_name']
-                files_src=create_cube['files_src']
-                files_dest=create_cube['files_dest']
-                current_path=create_cube['current_path']
+                format_name = create_cube['format_name']
+                chunks_name = create_cube['chunks_name']
+                files_src = create_cube['files_src']
+                files_dest = create_cube['files_dest']
+                current_path = create_cube['current_path']
                 logging.info(f"files_dest {files_dest}")
                 logging.info(f"current_path {current_path}")
                 logging.info(f"format_name {format_name}")
@@ -101,7 +89,7 @@ if __name__ == '__main__':
                 logging.info(f"Consumer | Done creating Image Collection ...{data}")
 
             # if  state == Producers.WRITE_CHUNKS:
-            if  state == 2:
+            if state == 2:
                 logging.info("Consumer | Writing chunks...")
                 write_chunks = consumed_message["write_chunks"]
 

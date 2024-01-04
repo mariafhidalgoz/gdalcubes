@@ -14,13 +14,13 @@ spec:
         app: kafka
     spec:
       containers:
-      - name: kafka
-        image: debezium/kafka
-        ports:
-        - containerPort: 9093
-          name: kafka
-        env:
-        - name: BROKER_ID
-          value: '0'
-        - name: ZOOKEEPER_CONNECT
-          value: 'zookeeper.default.svc:2181'
+        - name: kafka
+          image: debezium/kafka
+          ports:
+            - containerPort: 9092
+              name: kafka
+          env:
+            - name: BROKER_ID
+              value: '0'
+            - name: ZOOKEEPER_CONNECT
+              value: 'zookeeper.default.svc:2181'

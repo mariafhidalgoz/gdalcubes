@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: send-chunks
+spec:
+  containers:
+    - name: send-chunks
+      image: mafehiza/gdalcubepy-producer-2

@@ -25,20 +25,81 @@ kubectl apply -f src/job/kubernetes/headless-service-zookeeper.yaml
 1. Get the serviceName from zookeeper StatefulSet
 2. Create multi brokers kafka.
 File `src/job/kubernetes/statefulset-multi-broker-kafka.yaml`
-3. Update the `ZOOKEEPER_CONNECT` env variable with the value `<serviceName>.<namespace>.svc:2181`
+3. Update the `ZOOKEEPER_CONNECT` env variable with the value `<zookeeper serviceName>.<namespace>.svc:2181`
 
-value: "<serviceName>.<namespace>.svc:2181"
-value: "zookeeper.kafka.svc:2181"
+value: "<zookeeper serviceName>.<namespace>.svc:2181"
+value: "zookeeper.datacubepy.svc:2181"
 
-1. Update the `KAFKA_ADVERTISED_LISTENERS` env variable with the value `<serviceName>.<namespace>.svc:9092`
+1. Update the `KAFKA_ADVERTISED_LISTENERS` env variable with the value `<kafka serviceName>.<namespace>.svc:9092`
 
-INTERNAL://$(POD_NAME).<serviceName>.<namespace>.svc:9092
-INTERNAL://$(POD_NAME).kafka.kafka.svc:9092
+INTERNAL://$(POD_NAME).<kafka serviceName>.<namespace>.svc:9092
+INTERNAL://$(POD_NAME).kafka.datacubepy.svc:9092
 
 1. Apply changes
 ```shell
 kubectl apply -f src/job/kubernetes/statefulset-multi-broker-kafka.yaml
 ```
+
+1. Create kafka service (This open the port to use it from python producers and consumers).
+File `src/job/kubernetes/headless-service-kafka.yaml`
+2. Apply changes
+```shell
+kubectl apply -f src/job/kubernetes/headless-service-kafka.yaml
+```
+
+1. (Optional) To access externally by using NodePort. Then `localhost:30003` can be used.
+```shell
+kubectl apply -f src/job/kubernetes/bootstrap-service-kafka.yaml
+kubectl apply -f src/job/kubernetes/kafka-0-service.yaml
+kubectl apply -f src/job/kubernetes/kafka-1-service.yaml
+kubectl apply -f src/job/kubernetes/kafka-2-service.yaml
+```
+
+# Check kafka consumer and producers locally
+
+1. Install kafka application locally
+
+
+1. Check topics
+```shell
+kafka-topics --list --bootstrap-server localhost:30003
+```
+
+1. Produce 
+```shell
+kafka-console-producer --topic my-topic --bootstrap-server localhost:30003
+```
+
+1. Consume
+```shell
+kafka-console-consumer --topic my-topic --bootstrap-server localhost:30003 --from-beginning
+```
+
+# Check kafka consumer and producers in a pod
+
+`<serviceName>:9092` or `<kafka-pod>.<serviceName>.<namespace>.svc:9092` can be used as `bootstrap-server`
+`kafka:9092` or `kafka-0.kafka.datacubepy:9092`
+
+1. Enter to a pod
+```shell
+kubectl exec -it kafka-0 -- bash
+```
+
+1. Check topics
+```shell
+./bin/kafka-topics.sh --list --bootstrap-server kafka:9092
+```
+
+1. Produce
+```shell
+./bin/kafka-console-producer.sh --topic my-topic --bootstrap-server kafka-0.kafka.datacubepy.svc:9092
+```
+
+1. Consume
+```shell
+./bin/kafka-console-consumer.sh --topic my-topic --bootstrap-server kafka-2.kafka.datacubepy.svc:9092 --from-beginning
+```
+
 
 # Config producer the initial task
 

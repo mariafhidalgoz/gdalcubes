@@ -23,4 +23,9 @@ spec:
             - name: BROKER_ID
               value: '0'
             - name: ZOOKEEPER_CONNECT
-              value: 'zookeeper.default.svc:2181'
+              value: 'zookeeper.datacubepy.svc:2181'
+          resources:
+            limits:
+              memory: 500Mi
+              cpu: 500m
+              ephemeral-storage: 500Mi

@@ -96,14 +96,14 @@ kubectl port-forward kafka 9092:9092
 kubectl port-forward service/gdalcubepy-kafka 9092:9092
 
 
-kubectl delete -f src/job/kubernetes/statefulset-zookeeper.yaml
-kubectl delete -f src/job/kubernetes/headless-service-zookeeper.yaml
-kubectl delete -f src/job/kubernetes/statefulset-multi-broker-kafka.yaml
-kubectl delete -f src/job/kubernetes/headless-service-kafka.yaml
-kubectl delete -f src/job/kubernetes/bootstrap-service-kafka.yaml
-kubectl delete -f src/job/kubernetes/kafka-0-service.yaml
-kubectl delete -f src/job/kubernetes/kafka-1-service.yaml
-kubectl delete -f src/job/kubernetes/kafka-2-service.yaml
+kubectl delete -f src/job/kubernetes/statefulset-zookeeper.yaml -n datacubepy
+kubectl delete -f src/job/kubernetes/headless-service-zookeeper.yaml -n datacubepy
+kubectl delete -f src/job/kubernetes/statefulset-multi-broker-kafka.yaml -n datacubepy
+kubectl delete -f src/job/kubernetes/headless-service-kafka.yaml -n datacubepy
+kubectl delete -f src/job/kubernetes/bootstrap-service-kafka.yaml -n datacubepy
+kubectl delete -f src/job/kubernetes/kafka-0-service.yaml -n datacubepy
+kubectl delete -f src/job/kubernetes/kafka-1-service.yaml -n datacubepy
+kubectl delete -f src/job/kubernetes/kafka-2-service.yaml -n datacubepy
 
 
 

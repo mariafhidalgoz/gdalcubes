@@ -10,9 +10,7 @@ from kafka import KafkaProducer, KafkaConsumer
 GDALCUBESPY_NOTIFICATIONS_KAFKA_TOPIC = "gdalcubespy-notifications"
 GDALCUBESPY_CONSUMER_KAFKA_TOPIC = "write-netcdf"
 
-producer = KafkaProducer(
-    bootstrap_servers="kafka:9092"
-)
+producer = KafkaProducer(bootstrap_servers="kafka:9092")
 
 consumer = KafkaConsumer(
     GDALCUBESPY_NOTIFICATIONS_KAFKA_TOPIC,

@@ -58,6 +58,55 @@ kubectl apply -f src/job/kubernetes/kafka-1-service.yaml -n datacubepy
 kubectl apply -f src/job/kubernetes/kafka-2-service.yaml -n datacubepy
 ```
 
+
+# Adding JMX metrics for Kafka metrics
+
+Download `jmx_prometheus_javaagent-0.19.0.jar` file from `https://github.com/prometheus/jmx_exporter`
+
+Create kafka metrics file by using `https://github.com/prometheus/jmx_exporter/blob/main/example_configs/kafka-0-8-2.yml`
+
+Create configmap with the above files
+```shell
+kubectl create configmap jmx-config --from-file=src/job/kubernetes/jmx_exporter/jmx-prometheus-config.yaml -n datacubepy
+kubectl create configmap jmx-javaagent --from-file=src/job/kubernetes/jmx_exporter/jmx_prometheus_javaagent-0.19.0.jar -n datacubepy
+```
+
+Check files `` and `` and in the kafka borker
+```shell
+kubectl exec -it kafka-0 -n datacubepy -- bash
+ls /jmx_config_metrics/jmx-prometheus-config.yaml
+ls /jmx_javaagent/jmx_prometheus_javaagent-0.19.0.jar
+```
+
+Update brokers
+File: `src/job/kubernetes/statefulset-multi-broker-kafka.yaml`
+- Add the env variable `KAFKA_OPTS`
+```yaml
+- name: KAFKA_OPTS
+  value: "-javaagent:/jmx_javaagent/jmx_prometheus_javaagent-0.19.0.jar=32000:/jmx_config_metrics/jmx-prometheus-config.yaml"
+
+```
+
+- Add volumes for `jmx_config_metrics` and `jmx_javaagent`
+
+Create service
+```shell
+kubectl apply -f src/job/kubernetes/prometheus-service-kafka.yaml -n datacubepy
+```
+
+Restart kafka brokers
+```shell
+kubectl delete -f src/job/kubernetes/prometheus-service-kafka.yaml -n datacubepy
+kubectl apply -f src/job/kubernetes/prometheus-service-kafka.yaml -n datacubepy
+```
+
+
+# Check metrics by using
+```shell
+curl localhost:32000
+```
+
+
 # Check kafka consumer and producers locally
 
 1. Install kafka application locally

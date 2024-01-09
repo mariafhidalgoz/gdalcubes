@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-demo-app
+  labels:
+    app: my-demo-app
+spec:
+  selector:
+    matchLabels:
+      app: my-demo-app
+  template:
+    metadata:
+      labels:
+        app: my-demo-app
+    spec:
+      imagePullSecrets:
+        - name: registry-pull
+      initContainers:
+        - name: jmx-sidecar
+          image: my-jmx-exporter
+          command: ["cp", "-r", "/app/jmx_prometheus_javaagent-0.17.2.jar", "/target/jmx_prometheus_javaagent-0.17.2.jar"]
+          volumeMounts:
+            - name: sidecar
+              mountPath: /target
+      containers:
+        - image: my-demo-app-image
+          name: my-demo-app
+          resources:
+            requests:
+              memory: "1000Mi"
+              cpu: "500m"
+            limits:
+              memory: "1000Mi"
+              cpu: "500m"
+          ports:
+            - containerPort: 18083
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-javaagent:/app/jmx_prometheus_javaagent-0.17.2.jar=8088:/app/prometheus-jmx-config.yaml" ➋
+          volumeMounts:
+            - name: host-time
+              mountPath: /etc/localtime
+              readOnly: true
+            - name: sidecar
+              mountPath: /sidecar
+      volumes:
+        - name: host-time
+          hostPath:
+            path: /etc/localtime
+        - name: sidecar  # Share the agent folder
+          emptyDir: {}
+      restartPolicy: Always

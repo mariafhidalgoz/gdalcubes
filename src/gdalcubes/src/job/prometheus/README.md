@@ -69,3 +69,8 @@ kubectl --namespace datacubepy port-forward $POD_NAME 9090
 ```
 
 Go to `localhost:9090` and check the kafka-metrics are there
+
+Create service so Grafana can connect to Prometheus
+```shell
+kubectl kubectl apply -f src/job/prometheus/headless-service-prometheus.yaml -n datacubepy
+```

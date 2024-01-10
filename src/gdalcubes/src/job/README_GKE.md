@@ -41,7 +41,7 @@ File `src/job/kubernetes/statefulset-multi-broker-kafka.yaml`
 3. Update the `ZOOKEEPER_CONNECT` env variable with the value gotten in zookeeper configuration.
 
 value: "<zookeeper pod name>.<zookeeper service name>.<namespace>.svc.cluster.local:2181"
-value: "zookeeper-0.zookeeper-service.datacubepy.svc.cluster.loca:2181"
+value: "zookeeper-0.zookeeper.datacubepy.svc.cluster.loca:2181"
 
 1. Update the `KAFKA_ADVERTISED_LISTENERS` env variable with the value `<kafka serviceName>.<namespace>.svc:9092`
 
@@ -49,6 +49,7 @@ INTERNAL://$(POD_NAME).<kafka serviceName>.<namespace>.svc:9092
 INTERNAL://$(POD_NAME).kafka.datacubepy.svc:9092
 
 1. Apply changes
+NOTE: Remember create `jmx-config` and `jmx-javaagent` configmaps first, if they are not yet.
 ```shell
 kubectl apply -f src/job/kubernetes/statefulset-multi-broker-kafka.yaml -n datacubepy
 ```

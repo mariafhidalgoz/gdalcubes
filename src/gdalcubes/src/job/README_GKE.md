@@ -127,13 +127,6 @@ kubectl create configmap jmx-config --from-file=src/job/kubernetes/jmx_exporter/
 kubectl create configmap jmx-javaagent --from-file=src/job/kubernetes/jmx_exporter/jmx_prometheus_javaagent-0.19.0.jar -n datacubepy
 ```
 
-Check files `jmx-prometheus-config.yaml` and `jmx_prometheus_javaagent-0.19.0.jar` and in the kafka borker
-```shell
-kubectl exec -it kafka-0 -n datacubepy -- bash
-ls /jmx_config_metrics/jmx-prometheus-config.yaml
-ls /jmx_javaagent/jmx_prometheus_javaagent-0.19.0.jar
-```
-
 Update brokers
 File: `src/job/kubernetes/statefulset-multi-broker-kafka.yaml`
 - Add the env variable `KAFKA_OPTS`
@@ -145,25 +138,32 @@ File: `src/job/kubernetes/statefulset-multi-broker-kafka.yaml`
 
 - Add volumes for `jmx_config_metrics` and `jmx_javaagent`
 
-Create service (Probably not needed, if grafana is created in the same namespace)
+Create service to open the pods connection
 ```shell
-kubectl apply -f src/job/kubernetes/prometheus-service-kafka.yaml -n datacubepy
+kubectl apply -f src/job/kubernetes/headless-service-kafka-jmx-metrics.yaml -n datacubepy
 ```
 
 Restart kafka brokers
+kubectl rollout restart statefulset <statefulset-name>
 ```shell
-kubectl delete -f src/job/kubernetes/statefulset-multi-broker-kafka.yaml -n datacubepy
 kubectl apply -f src/job/kubernetes/statefulset-multi-broker-kafka.yaml -n datacubepy
+kubectl rollout restart statefulset kafka
+```
+
+Check files `jmx-prometheus-config.yaml` and `jmx_prometheus_javaagent-0.19.0.jar` and in the kafka borker
+```shell
+kubectl exec -it kafka-0 -n datacubepy -- bash
+ls /jmx_config_metrics/jmx-prometheus-config.yaml
+ls /jmx_javaagent/jmx_prometheus_javaagent-0.19.0.jar
 ```
 
 
 # Check metrics by using
+This would be to run inside a pod
 ```shell
-curl localhost:32000
+kubectl exec -it kafka-0 -n datacubepy -- bash
+curl localhost:8088
 ```
-
-This would be to run locally (inside the pod)
-curl localhost:8088 
 
 
 # Config producer for the initial task from python

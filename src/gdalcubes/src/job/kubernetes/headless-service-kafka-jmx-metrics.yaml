@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-jmx-metrics-service
+  labels:
+    app: kafka-jmx-metrics-service
+spec:
+  ports:
+    - port: 8088
+      name: jmx-metrics
+      protocol: TCP
+  clusterIP: None
+  selector:
+    app: kafka

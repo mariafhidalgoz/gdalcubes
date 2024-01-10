@@ -36,17 +36,17 @@ spec:
               value: "INTERNAL"
             - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
               value: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
-#            - name: EXTRA_ARGS
-#              value: "-javaagent:/jmx_javaagent/jmx_prometheus_javaagent-0.19.0.jar=8088:/jmx_config_metrics/jmx-prometheus-config.yaml"
-#          volumeMounts:
-#            - mountPath: /jmx_config_metrics
-#              name: config-vol-metrics
-#            - mountPath: /jmx_javaagent
-#              name: config-vol-javaagent
-#      volumes:
-#        - name: config-vol-metrics
-#          configMap:
-#            name: jmx-config
-#        - name: config-vol-javaagent
-#          configMap:
-#            name: jmx-javaagent
+            - name: EXTRA_ARGS
+              value: "-javaagent:/jmx_javaagent/jmx_prometheus_javaagent-0.19.0.jar=8088:/jmx_config_metrics/jmx-prometheus-config.yaml"
+          volumeMounts:
+            - mountPath: /jmx_config_metrics
+              name: config-vol-metrics
+            - mountPath: /jmx_javaagent
+              name: config-vol-javaagent
+      volumes:
+        - name: config-vol-metrics
+          configMap:
+            name: jmx-config
+        - name: config-vol-javaagent
+          configMap:
+            name: jmx-javaagent

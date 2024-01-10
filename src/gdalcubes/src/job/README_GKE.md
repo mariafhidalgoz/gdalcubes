@@ -22,16 +22,26 @@ File `src/job/kubernetes/headless-service-zookeeper.yaml`
 ```shell
 kubectl apply -f src/job/kubernetes/headless-service-zookeeper.yaml -n datacubepy
 ```
+1. Get the right url to connect kafka with zookeeper service.
+Run another curl application to test this:
+```shell
+kubectl run curl --image=radial/busyboxplus:curl -i --tty --rm
+```
+Hit enter and run
+```shell
+nslookup zookeeper
+```
+
 
 # Config kafka
 
 1. Get the serviceName from zookeeper StatefulSet
 2. Create multi brokers kafka.
 File `src/job/kubernetes/statefulset-multi-broker-kafka.yaml`
-3. Update the `ZOOKEEPER_CONNECT` env variable with the value `<zookeeper serviceName>.<namespace>.svc:2181`
+3. Update the `ZOOKEEPER_CONNECT` env variable with the value gotten in zookeeper configuration.
 
-value: "<zookeeper serviceName>.<namespace>.svc:2181"
-value: "zookeeper.datacubepy.svc:2181"
+value: "<zookeeper pod name>.<zookeeper service name>.<namespace>.svc.cluster.local:2181"
+value: "zookeeper-0.zookeeper-service.datacubepy.svc.cluster.loca:2181"
 
 1. Update the `KAFKA_ADVERTISED_LISTENERS` env variable with the value `<kafka serviceName>.<namespace>.svc:9092`
 

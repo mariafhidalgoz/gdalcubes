@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-a
+spec:
+  containers:
+    - name: web-app
+      image: debezium/kafka
+      ports:
+        - containerPort: 8081

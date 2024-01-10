@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-b
+spec:
+  containers:
+    - name: client-app
+      image: debezium/kafka
+      command: ["sleep", "infinity"]
+      ports:
+        - containerPort: 8080

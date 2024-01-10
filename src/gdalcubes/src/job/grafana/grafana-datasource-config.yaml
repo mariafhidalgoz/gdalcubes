@@ -15,7 +15,9 @@ data:
           "orgId": 1,
           "type": "prometheus",
     #      "url": "http://prometheus-service.monitoring.svc:8080",
-          "url": "http://my-prometheus.datacubepy.svc:31000",
+    #      "url": "http://my-prometheus.datacubepy.svc:31000",
+          "url": "http://dcp-prometheus-server.datacubepy.svc.cluster.local:9090",
+    #      "url": "http://dcp-prometheus-server:9090",
     #      "url": "http://localhost:9090",
           "version": 1
         }

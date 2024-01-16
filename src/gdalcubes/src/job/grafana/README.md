@@ -24,12 +24,15 @@ kubectl create -f src/job/grafana/service.yaml -n datacubepy
 
 Run port forward
 ```shell
-kubectl --namespace datacubepy port-forward grafana-657b7b7c76-qkrtt 3000
+kubectl --namespace datacubepy port-forward grafana-698df9ff6-rp8s2 3000
 ```
 
-Go to `localhost:9090` and check the kafka-metrics are there
+Go to `localhost:3000`
 
 
 # Config Prometheus in Grafana
+Dashboard used
+https://grafana.com/grafana/dashboards/721-kafka/
 
+Config datasource in grafana
 Change `localhost` by `http://host.docker.internal:9090`

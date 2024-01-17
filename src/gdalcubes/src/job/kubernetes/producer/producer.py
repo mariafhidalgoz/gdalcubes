@@ -4,6 +4,7 @@ import json
 import os
 import time
 import uuid
+import datetime
 from enum import Enum
 
 from kafka import KafkaProducer
@@ -64,7 +65,15 @@ if __name__ == '__main__':
     )
 
     # send messages to kafka topic
+    print(f"Producer | Start sending process ...{data}")
+    start_time = time.time()
+    start_dt = datetime.datetime.fromtimestamp(start_time)
     producer.send(GDALCUBESPY_NOTIFICATIONS_KAFKA_TOPIC, json.dumps(data).encode("utf-8"))
+    end_time = time.time()
+    end_dt = datetime.datetime.fromtimestamp(end_time)
+    print(f"Producer | --- Time start: {start_dt.strftime('%Y-%m-%d %H:%M:%S')} ---")
+    print(f"Producer | --- Time end: {end_dt.strftime('%Y-%m-%d %H:%M:%S')} ---")
+    print(f"Producer | --- {end_time - start_time} seconds ---")
     print(f"Producer | Done sending process ...{data}")
 
     # time.sleep(1)

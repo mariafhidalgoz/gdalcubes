@@ -2,6 +2,8 @@
 # Creating the producer to notify the status of the process
 import json
 import logging
+import time
+import datetime
 from enum import Enum
 from pathlib import Path
 
@@ -59,13 +61,29 @@ if __name__ == '__main__':
                 output_image_collection = f"{files_dest}/image_collection.db"
                 # format_ic = f"{current_path}/formats/{format_name}.json"
                 format_ic = f"{format_name}.json"
+                logging.info("Consumer | Start creating Image Collection ...")
+                start_time = time.time()
+                start_dt = datetime.datetime.fromtimestamp(start_time)
                 gdalcubepy.gdalcubes.create_image_collection(files_src, output_image_collection, format_ic)
+                end_time = time.time()
+                end_dt = datetime.datetime.fromtimestamp(end_time)
+                logging.info(f"Consumer | --- Time start: {start_dt.strftime('%Y-%m-%d %H:%M:%S')} ---")
+                logging.info(f"Consumer | --- Time end: {end_dt.strftime('%Y-%m-%d %H:%M:%S')} ---")
+                logging.info(f"Consumer | --- {end_time - start_time} seconds ---")
                 # Paths kafka
                 # gdalcubepy.gdalcubes.create_image_collection("file_list.txt", "new_image_collection.db", "L8_SR.json")
                 logging.info("Consumer | Image Collection created (.db)")
 
                 # Create cube
+                logging.info(f"Consumer | Start creating Cube ...")
+                start_time = time.time()
+                start_dt = datetime.datetime.fromtimestamp(start_time)
                 cube = gdalcubepy.gdalcubes.create_image_collection_cube(output_image_collection)
+                end_time = time.time()
+                end_dt = datetime.datetime.fromtimestamp(end_time)
+                logging.info(f"Consumer | --- Time start: {start_dt.strftime('%Y-%m-%d %H:%M:%S')} ---")
+                logging.info(f"Consumer | --- Time end: {end_dt.strftime('%Y-%m-%d %H:%M:%S')} ---")
+                logging.info(f"Consumer | --- {end_time - start_time} seconds ---")
                 logging.info("Consumer | Cube created")
 
                 # Chunks number of a cube
@@ -99,7 +117,16 @@ if __name__ == '__main__':
                 logging.info(f"Consumer | Chunk Id {chunk_id} is empty {is_chunk_empty}.")
                 if not is_chunk_empty:
                     output_chunk = f"{files_dest}/{chunks_name}{chunk_id}.nc"
+                    logging.info(f"Consumer | Start processing Chunk Id {chunk_id} ...")
+                    start_time = time.time()
+                    start_dt = datetime.datetime.fromtimestamp(start_time)
                     gdalcubepy.gdalcubes.write_single_chunk_netcdf(cube, output_chunk, chunk_id)
+                    end_time = time.time()
+                    end_dt = datetime.datetime.fromtimestamp(end_time)
+                    logging.info(f"Consumer | --- Time start: {start_dt.strftime('%Y-%m-%d %H:%M:%S')} ---")
+                    logging.info(f"Consumer | --- Time end: {end_dt.strftime('%Y-%m-%d %H:%M:%S')} ---")
+                    logging.info(f"Consumer | --- {end_time - start_time} seconds ---")
+                    logging.info(f"Consumer | Chunk Id {chunk_id} processed")
 
                 data = dict(
                     task_id=task_id,

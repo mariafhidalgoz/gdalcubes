@@ -6,6 +6,7 @@ from enum import Enum
 
 from kafka import KafkaProducer, KafkaConsumer
 
+logging.basicConfig(level=logging.INFO)
 
 GDALCUBESPY_NOTIFICATIONS_KAFKA_TOPIC = "gdalcubespy-notifications"
 GDALCUBESPY_CONSUMER_KAFKA_TOPIC = "write-netcdf"
@@ -17,13 +18,15 @@ consumer = KafkaConsumer(
     bootstrap_servers="kafka:9092",
 )
 
+
 class Producers(Enum):
     CREATE_IMAGE_COLLECTION = 1
     WRITE_CHUNKS = 2
     MERGE_CHUNKS = 3
 
+
 if __name__ == '__main__':
-    chunks_written= set()
+    chunks_written = set()
     logging.info("Notification | Started sending out process...")
     while True:
         for message in consumer:
@@ -40,7 +43,7 @@ if __name__ == '__main__':
             logging.info(f"Notification | State: {state}")
             # 1. Producers.CREATE_IMAGE_COLLECTION
             if state == 1:
-            # if state == Producers.CREATE_IMAGE_COLLECTION:
+                # if state == Producers.CREATE_IMAGE_COLLECTION:
                 logging.info("Notification | Creating Image Collection ...")
 
                 create_cube = consumed_message["create_cube"]
@@ -64,7 +67,7 @@ if __name__ == '__main__':
 
             # 2. Producers.WRITE_CHUNKS
             if state == 2:
-            # if state == Producers.WRITE_CHUNKS:
+                # if state == Producers.WRITE_CHUNKS:
                 logging.info("Notification | Writing chunks...")
 
                 write_chunks = consumed_message["write_chunks"]

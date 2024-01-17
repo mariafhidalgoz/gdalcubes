@@ -81,8 +81,15 @@ kafka-topics --list --bootstrap-server localhost:30003
 ```
 
 ```shell
-kafka-topics.sh --create --partitions 1 --replication-factor 1 --topic my-topic-2 --bootstrap-server localhost:30003
+kafka-topics --create --partitions 3 --replication-factor 1 --topic my-topic-2 --bootstrap-server localhost:30003
 ```
+gdalcubespy-notifications
+write-netcdf
+
+```shell
+kafka-topics --delete --topic my-topic-2 --bootstrap-server localhost:30003
+```
+
 1. Produce 
 ```shell
 kafka-console-producer --topic my-topic --bootstrap-server localhost:30003
@@ -107,8 +114,6 @@ kubectl exec -it kafka-0 -- bash
 ```shell
 ./bin/kafka-topics.sh --list --bootstrap-server kafka:9092
 ```
-./bin/kafka-topics.sh --describe --bootstrap-server kafka:9092 --topic my-topic
-./bin/kafka-topics.sh --describe --zookeeper zookeeper:2181 --topic my-topic
 
 1. Produce
 ```shell

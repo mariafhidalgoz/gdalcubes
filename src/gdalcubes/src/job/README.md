@@ -343,8 +343,10 @@ kubectl run send-chunks --rm --tty -i \
 ## Updated deployments & send messages
 
 ```shell
-kubectl apply -f src/job/kubernetes/deployment.yaml --namespace gdalcubepy-kafka
+kubectl apply -f src/job/kubernetes/deployment.yaml -n datacubepy
 ```
+
+kubectl apply -f src/job/kubernetes/send-chunks-pod.yaml -n datacubepy
 
 Start message
 ```shell
@@ -355,6 +357,14 @@ kubectl run send-chunks --rm --tty -i \
 --command \
 -- python -u ./producer.py --source="/opt/gdalcubes/Python/L8_Amazon_mini"
 ```
+kubectl run send-chunks --rm --tty -i \
+--image mafehiza/gdalcubepy-producer \
+--overrides='{ "apiVersion": "v1", "spec":{"template":{"spec": {"containers":[{"name":"send-chunks","image":"mafehiza/gdalcubepy-producer", "resources":{"limits":{"memory":"128Mi", "cpu": "500m", "ephemeral-storage": "500Mi"} }}]}}}}' \
+--restart Never \
+--namespace datacubepy \      
+--command \
+-- python -u ./producer.py --source="/opt/gdalcubes/Python/L8_Amazon_mini"
+
 python -u ./producer.py --source="/opt/gdalcubes/Python/L8_Amazon_mini"
 python -u ./producer.py --source="/opt/gdalcubes/Python/file_list.txt"
 python -u ./producer.py --source="file_list.txt"

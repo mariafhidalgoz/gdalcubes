@@ -2,7 +2,15 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: send-chunks
+  namespace: datacubepy
 spec:
   containers:
     - name: send-chunks
-      image: mafehiza/gdalcubepy-producer-2
+      image: mafehiza/gdalcubepy-producer
+#      command: [ "python", "-u", "./producer.py", '--source="/opt/gdalcubes/Python/L8_Amazon_mini"' ]
+      resources:
+        limits:
+          memory: 128Mi
+          cpu: 500m
+          ephemeral-storage: 500Mi
+  restartPolicy: Never

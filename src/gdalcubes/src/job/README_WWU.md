@@ -84,6 +84,7 @@ kubectl get all
 gdalcubepy-kafka.datacubepy.svc.cluster.local
 kafka.default.svc.cluster.local
 
+./bin/kafka-topics.sh --list --zookeeper localhost:2181
 kafka-topics --list --zookeeper localhost:2181
 kafka-topics --list --bootstrap-server 10.1.0.73:9092
 

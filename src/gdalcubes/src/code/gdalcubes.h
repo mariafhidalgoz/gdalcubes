@@ -25,7 +25,8 @@ class gdalcubes {
 
     static void raster_cube(std::string input, std::string output);
 
-    static std::shared_ptr<image_collection_cube> create_image_collection_cube(std::string input);
+    static std::shared_ptr<image_collection_cube> create_image_collection_cube(
+        std::string input, uint32_t chunk_size);
     static int total_chunks(std::shared_ptr<image_collection_cube> cube);
     static bool is_chunk_empty(
         std::shared_ptr<image_collection_cube> cube,

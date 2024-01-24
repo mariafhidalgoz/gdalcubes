@@ -97,7 +97,26 @@ if __name__ == '__main__':
             # when all chunks are processed, send other message to join the chunks
             # if state == Producers.MERGE_CHUNKS:
             if state == 3:
-                logging.info("Notification - Merging chunks...")
-                continue
+                logging.info("Notification | Merging chunks...")
+
+                # merge_chunks = consumed_message["merge_chunks"]
+
+                # 2.1. Check total of chunks
+                # total_chunks = merge_chunks['total_chunks']
+                # logging.info(f"Notification S-3  | Folder {total_chunks}")
+                # cube = write_chunks['cube']
+
+                # 2.2. Publish a message to write each chunk
+
+                data = dict(
+                    task_id=task_id,
+                    state=3,
+                    # state=Producers.WRITE_CHUNKS,
+                )
+
+                # Send message to kafka topic
+                producer.send(GDALCUBESPY_CONSUMER_KAFKA_TOPIC, json.dumps(data).encode("utf-8"))
+                logging.info(f"Notification - Done writing chunks ...{data}")
+                # continue
 
             time.sleep(1)

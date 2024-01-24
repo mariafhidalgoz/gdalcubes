@@ -22,36 +22,15 @@ File `src/job/kubernetes/headless-service-zookeeper.yaml`
 ```shell
 kubectl apply -f src/job/kubernetes/headless-service-zookeeper.yaml -n datacubepy
 ```
-
-```shell
-kubectl apply -f src/job/kubernetes/network-policy-allow-all-ingress.yaml -n datacubepy
-```
-
 1. Get the right url to connect kafka with zookeeper service.
 Run another curl application to test this:
 ```shell
-kubectl run curl --image=radial/busyboxplus:curl -i --tty --rm -n datacubepy
+kubectl run curl --image=radial/busyboxplus:curl -i --tty --rm
 ```
-(Alternative) Using limit resources
-```shell
-kubectl apply -f src/job/kubernetes/curl.yaml
-kubectl exec -it busybox -n datacubepy -- sh
-```
-
-```shell
-kubectl apply -f src/job/kubernetes/curl.yaml
-kubectl exec -it busybox2 -n datacubepy -- sh
-```
-
 Hit enter and run
 ```shell
 nslookup zookeeper
 ```
-
-```shell
-curl zookeeper:2181
-```
-curl: (52) Empty reply from server
 
 
 # Config kafka
@@ -62,7 +41,7 @@ File `src/job/kubernetes/statefulset-multi-broker-kafka.yaml`
 3. Update the `ZOOKEEPER_CONNECT` env variable with the value gotten in zookeeper configuration.
 
 value: "<zookeeper pod name>.<zookeeper service name>.<namespace>.svc.cluster.local:2181"
-value: "zookeeper-0.zookeeper.datacubepy.svc.cluster.local:2181"
+value: "zookeeper-0.zookeeper.datacubepy.svc.cluster.loca:2181"
 
 1. Update the `KAFKA_ADVERTISED_LISTENERS` env variable with the value `<kafka serviceName>.<namespace>.svc:9092`
 
@@ -104,10 +83,8 @@ kafka-topics --list --bootstrap-server localhost:30003
 ```shell
 kafka-topics --create --partitions 3 --replication-factor 1 --topic my-topic-2 --bootstrap-server localhost:30003
 ```
-kafka-topics --create --partitions 1 --replication-factor 1 --topic gdalcubespy-notifications --bootstrap-server localhost:30003
-kafka-topics --create --partitions 3 --replication-factor 1 --topic write-netcdf --bootstrap-server localhost:30003
-
-kafka-topics --describe --topic write-netcdf --bootstrap-server localhost:30003
+gdalcubespy-notifications
+write-netcdf
 
 ```shell
 kafka-topics --delete --topic my-topic-2 --bootstrap-server localhost:30003
@@ -130,18 +107,13 @@ kafka-console-consumer --topic my-topic --bootstrap-server localhost:30003 --fro
 
 1. Enter to a pod
 ```shell
-kubectl exec -it kafka-0 -n datacubepy -- bash
+kubectl exec -it kafka-0 -- bash
 ```
 
 1. Check topics
 ```shell
 ./bin/kafka-topics.sh --list --bootstrap-server kafka:9092
 ```
-
-./bin/kafka-topics.sh --create --partitions 1 --replication-factor 1 --topic gdalcubespy-notifications --bootstrap-server kafka:9092
-./bin/kafka-topics.sh --create --partitions 3 --replication-factor 1 --topic write-netcdf --bootstrap-server kafka:9092
-
-./bin/kafka-topics.sh --describe --topic write-netcdf --bootstrap-server kafka:9092
 
 1. Produce
 ```shell

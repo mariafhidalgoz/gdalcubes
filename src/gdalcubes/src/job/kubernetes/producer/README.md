@@ -65,6 +65,12 @@ spec:
 ```shell
 kubectl apply -f src/job/kubernetes/send-chunks-pod.yaml
 ```
+```shell
+kubectl exec -it send-chunks -n datacubepy -- bash
+```
+```python
+python -u ./producer.py --source="/opt/gdalcubes/Python/L8_Amazon_mini"
+```
 (Alterntive) To create a deployment from a manifest.
 ```yaml
 apiVersion: apps/v1

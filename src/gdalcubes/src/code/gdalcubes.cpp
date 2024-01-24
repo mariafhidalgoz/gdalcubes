@@ -121,11 +121,11 @@ void gdalcubes::raster_cube(
 }
 
 std::shared_ptr<image_collection_cube> gdalcubes::create_image_collection_cube(
-    std::string input = "./image_collection.db") {
+    std::string input = "./image_collection.db",
+    uint32_t chunk_size = 0) {
     config::instance()->gdalcubes_init();
 
     auto icc = image_collection_cube::create(input);
-    std::cout << "Image Collection Cube | Raster Cube created" << std::endl;
     return icc;
 }
 
@@ -172,7 +172,7 @@ void gdalcubes::write_single_chunk_netcdf(
     config::instance()->gdalcubes_init();
 
     auto icc = image_collection_cube::create(input);
-    std::cout << "Image Collection Cube | Raster Cube created" << std::endl;
+    std::cout << "Raster Cube created" << std::endl;
 
     icc->write_single_chunk_netcdf(chunk_id, output, 0);
     std::cout << "Write Single NetCDF" << std::endl;

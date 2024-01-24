@@ -107,6 +107,11 @@ icc = gdalcubepy.image_collection_cube(ic)
 #' plot(reduce_time(L8.ndvi, "median(NDVI)"), key.pos=1, zlim=c(0,1))
 ```
 
+Activate environment
+```shell
+source .venv/bin/activate
+```
+
 ```python 
 import os
 from gdalcubepy import gdalcubes as gcp
@@ -134,7 +139,7 @@ gcp.raster_cube(
 
 # Create cube
 cube = gcp.create_image_collection_cube(
-    f"{os.getcwd()}/Python/results/new_image_collection_from_file.db")
+    f"{os.getcwd()}/Python/results/new_image_collection_from_txt_file.db")
 # Chunks number of a cube
 gcp.total_chunks(cube)
 
@@ -153,8 +158,8 @@ gcp.write_single_chunk_netcdf(
 # From python cube
 gcp.write_single_chunk_netcdf(
     cube,
-    f"Python/results/single_chunk_3.nc",
-    3
+    f"Python/results/single_chunk_2.nc",
+    2
 )
 
 # Merge chunks netcdf
@@ -162,8 +167,13 @@ import os
 from gdalcubepy import gdalcubes as gcp
 cube = gcp.create_image_collection_cube(
     f"{os.getcwd()}/Python/results/new_image_collection_from_txt_file.db")
+cube = gcp.create_image_collection_cube(
+    f"/tmp/4738bdc8-10bd-454d-a24b-02f48e547291/image_collection.db")
+
 gcp.total_chunks(cube)
-gcp.merge_chunks(cube, f"Python/results/test3", "result")
+gcp.merge_chunks(cube, "Python/results/test5", "result")
+gcp.merge_chunks(cube, f"/tmp/4738bdc8-10bd-454d-a24b-02f48e547291/", "/result")
+
 
 ```
 
@@ -200,3 +210,5 @@ Push the image to Docker Hub
 docker tag gdalcubepy mafehiza/gdalcubepy
 docker push mafehiza/gdalcubepy
 ```
+docker build --tag mafehiza/gdalcubepy -f DockerfilePython .
+docker push mafehiza/gdalcubepy

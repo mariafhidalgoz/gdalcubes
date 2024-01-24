@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: gdalcubepy-con
-          image: mafehiza/gdalcubepy-consumer
+          image: mafehiza/gdalcubepy-consumer-3
           resources:
             limits:
               memory: 128Mi
@@ -29,7 +29,7 @@ spec:
   selector:
     matchLabels:
       app: gdalcubepy-not
-  replicas: 3 # tells deployment to run 2 pods matching the template
+  replicas: 1 # tells deployment to run 2 pods matching the template
   template:
     metadata:
       labels:
@@ -37,7 +37,7 @@ spec:
     spec:
       containers:
         - name: gdalcubepy-not
-          image: mafehiza/gdalcubepy-notification
+          image: mafehiza/gdalcubepy-notification-3
           resources:
             limits:
               memory: 128Mi

@@ -126,6 +126,27 @@ std::shared_ptr<image_collection_cube> gdalcubes::create_image_collection_cube(
     config::instance()->gdalcubes_init();
 
     auto icc = image_collection_cube::create(input);
+    std::cout << "[C++] " << "Image Collection Cube | Raster Cube created" << std::endl;
+
+    std::cout << "[C++] " << "Image Collection Cube | Count Chunks" << std::endl;
+    std::cout << "[C++] " << "Total Chunks:" << icc->count_chunks() << std::endl;
+    std::cout << "[C++] " << "Image Collection Cube | Size Chunks:" << std::endl;
+    std::cout << "[C++] " << "Time:" << icc->chunk_size()[0] << std::endl;
+    std::cout << "[C++] " << "Y:" << icc->chunk_size()[1] << std::endl;
+    std::cout << "[C++] " << "Z:" << icc->chunk_size()[2] << std::endl;
+
+    if (chunk_size > 0) {
+        icc->set_chunk_size(icc->chunk_size()[0], chunk_size, chunk_size);
+        std::cout << "[C++] " << "Image Collection Cube | Size Chunks Set" << std::endl;
+
+        std::cout << "[C++] " << "Image Collection Cube | Count Chunks" << std::endl;
+        std::cout << "[C++] " << "Total Chunks:" << icc->count_chunks() << std::endl;
+        std::cout << "[C++] " << "Image Collection Cube | Size Chunks:" << std::endl;
+        std::cout << "[C++] " << "Time:" << icc->chunk_size()[0] << std::endl;
+        std::cout << "[C++] " << "Y:" << icc->chunk_size()[1] << std::endl;
+        std::cout << "[C++] " << "Z:" << icc->chunk_size()[2] << std::endl;
+    }
+
     return icc;
 }
 

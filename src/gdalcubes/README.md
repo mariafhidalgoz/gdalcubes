@@ -171,7 +171,7 @@ cube = gcp.create_image_collection_cube(
     f"/tmp/4738bdc8-10bd-454d-a24b-02f48e547291/image_collection.db")
 
 gcp.total_chunks(cube)
-gcp.merge_chunks(cube, "Python/results/test5", "result")
+gcp.merge_chunks(cube, "Python/results/test6", "result")
 gcp.merge_chunks(cube, f"/tmp/4738bdc8-10bd-454d-a24b-02f48e547291/", "/result")
 
 
@@ -207,8 +207,8 @@ import gdalcubepy
 
 Push the image to Docker Hub
 ```shell
-docker tag gdalcubepy mafehiza/gdalcubepy
-docker push mafehiza/gdalcubepy
+docker tag gdalcubepy mafehiza/gdalcubepy-5
+docker push mafehiza/gdalcubepy-5
 ```
-docker build --tag mafehiza/gdalcubepy -f DockerfilePython .
-docker push mafehiza/gdalcubepy
+docker build --tag mafehiza/gdalcubepy-3 -f DockerfilePython .
+docker push mafehiza/gdalcubepy-3

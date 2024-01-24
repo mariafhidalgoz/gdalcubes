@@ -1,6 +1,5 @@
-FROM mafehiza/gdalcubepy
-#FROM python:3.10
-#MAINTAINER Maria Hidalgo <mhidalgo@uni-muenster.de>
+FROM python:3.10
+MAINTAINER Maria Hidalgo <mhidalgo@uni-muenster.de>
 
 RUN pip install kafka-python
 

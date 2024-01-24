@@ -146,20 +146,20 @@ if __name__ == '__main__':
             # if state == Producers.MERGE_CHUNKS:
             if state == 3:
                 logging.info("Consumer S-3 | Merging chunks...")
-                # # cube = gcp.create_image_collection_cube(
-                # #     f"{os.getcwd()}/Python/results/new_image_collection_from_txt_file.db")
-                # total_chunks = gdalcubepy.gdalcubes.total_chunks(cube)
-                # logging.info(f"Consumer S-3  | Total chunks {total_chunks}")
-                #
-                # # output_merge = "Python/results/test3"
-                # output_merge = f"{files_dest}"
-                # logging.info(f"Consumer S-3  | Folder {output_merge}")
-                #
-                # output_file_merge = "result"
-                # logging.info(f"Consumer S-3  | File {output_file_merge}")
-                #
-                # # gcp.merge_chunks(cube, f"Python/results/test5", "result")
-                # gdalcubepy.gdalcubes.merge_chunks(cube, output_merge, output_file_merge)
-                # logging.info(f"Consumer | Done merging chunks ...{data}")
+                # cube = gcp.create_image_collection_cube(
+                #     f"{os.getcwd()}/Python/results/new_image_collection_from_txt_file.db")
+                total_chunks = gdalcubepy.gdalcubes.total_chunks(cube)
+                logging.info(f"Consumer S-3  | Total chunks {total_chunks}")
 
-                continue
+                # output_merge = "Python/results/test3"
+                output_merge = f"{files_dest}"
+                logging.info(f"Consumer S-3  | Folder {output_merge}")
+
+                output_file_merge = "result"
+                logging.info(f"Consumer S-3  | File {output_file_merge}")
+
+                # gcp.merge_chunks(cube, f"Python/results/test5", "result")
+                gdalcubepy.gdalcubes.merge_chunks(cube, output_merge, output_file_merge)
+                logging.info(f"Consumer | Done merging chunks ...{data}")
+
+                # continue

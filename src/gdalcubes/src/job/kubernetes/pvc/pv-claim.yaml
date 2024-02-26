@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: task-pv-claim
+  namespace: datacubepy
+spec:
+  storageClassName: usersharebronze
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi

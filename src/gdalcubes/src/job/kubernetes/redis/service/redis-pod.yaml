@@ -13,3 +13,8 @@ spec:
           value: "true"
       ports:
         - containerPort: 6379
+      resources:
+        limits:
+          memory: 128Mi
+          cpu: 100m
+          ephemeral-storage: 128Mi

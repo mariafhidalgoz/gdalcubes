@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gdalcubepy-process-chunks
+spec:
+  parallelism: 1
+  template:
+    metadata:
+      name: gdalcubepy-process-chunks
+    spec:
+      containers:
+      - name: gdalcubepy-process-chunks
+        image: mafehiza/gdalcubepy-process-chunks
+        resources:
+          limits:
+            memory: 128Mi
+            cpu: 100m
+            ephemeral-storage: 128Mi
+      restartPolicy: OnFailure

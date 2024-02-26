@@ -5,7 +5,7 @@ import time
 
 import gdalcubepy
 
-import rediswq
+from src.gdalcubes.src.job.kubernetes.redis.worker import rediswq
 
 host = "redis"
 # Uncomment next two lines if you do not have Kube-DNS working.

@@ -1,4 +1,5 @@
-FROM mafehiza/gdalcubepy
+FROM mafehiza/gdalcubepy-10
+MAINTAINER Maria Hidalgo <mhidalgo@uni-muenster.de>
 RUN pip install kafka-python
 
 WORKDIR /app

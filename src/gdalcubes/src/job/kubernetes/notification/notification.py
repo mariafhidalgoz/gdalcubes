@@ -74,6 +74,7 @@ if __name__ == '__main__':
 
                 # 2.1. Check total of chunks
                 total_chunks = write_chunks['total_chunks']
+                # output_image_collection = write_chunks['output_image_collection']
                 # cube = write_chunks['cube']
 
                 # 2.2. Publish a message to write each chunk
@@ -84,6 +85,7 @@ if __name__ == '__main__':
                         # state=Producers.WRITE_CHUNKS,
                         write_chunks=dict(
                             chunk_id=chunk_id,
+                            # output_image_collection=output_image_collection,
                             # cube=cube,
                         )
                     )

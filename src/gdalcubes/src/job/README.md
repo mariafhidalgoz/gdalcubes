@@ -22,6 +22,10 @@ Activate environment
 . /opt/gdalcubes/.venv/bin/activate
 ```
 
+```shell
+. src/gdalcubes/.venv/bin/activate
+```
+
 Test library in container
 ```python
 import gdalcubepy

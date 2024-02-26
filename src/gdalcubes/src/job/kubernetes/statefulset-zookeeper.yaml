@@ -29,5 +29,5 @@ spec:
           resources:
             limits:
               memory: 128Mi
-              cpu: 500m
-              ephemeral-storage: 500Mi
+              cpu: 200m
+              ephemeral-storage: 128Mi

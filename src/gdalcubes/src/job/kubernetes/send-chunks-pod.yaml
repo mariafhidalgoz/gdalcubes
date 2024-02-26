@@ -4,13 +4,26 @@ metadata:
   name: send-chunks
   namespace: datacubepy
 spec:
+  volumes:
+    - name: task-pv-storage
+      persistentVolumeClaim:
+        claimName: task-pv-claim
   containers:
     - name: send-chunks
-      image: mafehiza/gdalcubepy-producer
+#      image: mafehiza/gdalcubepy-producer-12  # 12 chunks
+#      image: mafehiza/gdalcubepy-producer-32  # 32 chunks
+#      image: mafehiza/gdalcubepy-producer-64  # 64 chunks
+      image: mafehiza/gdalcubepy-producer-80  # 80 chunks
+#      image: mafehiza/gdalcubepy-producer-96  # 96 chunks
+#      image: mafehiza/gdalcubepy-producer-112  # 112 chunks
+#      image: mafehiza/gdalcubepy-producer-128  # 128 chunks
+      volumeMounts:
+          - mountPath: "/tmp"
+            name: task-pv-storage
 #      command: [ "python", "-u", "./producer.py", '--source="/opt/gdalcubes/Python/L8_Amazon_mini"' ]
       resources:
         limits:
           memory: 128Mi
-          cpu: 500m
-          ephemeral-storage: 500Mi
+          cpu: 100m
+          ephemeral-storage: 128Mi
   restartPolicy: Never

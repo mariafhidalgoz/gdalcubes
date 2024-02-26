@@ -1,45 +1,58 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
   name: gdalcubepy-consumer
 spec:
-  selector:
-    matchLabels:
-      app: gdalcubepy-con
-  replicas: 3 # tells deployment to run 1 pods matching the template
+#  replicas: 6 # tells deployment to run 1 pods matching the template
+  parallelism: 6
   template:
     metadata:
       labels:
         app: gdalcubepy-con
     spec:
+      volumes:
+        - name: task-pv-storage
+          persistentVolumeClaim:
+            claimName: task-pv-claim
       containers:
         - name: gdalcubepy-con
-          image: mafehiza/gdalcubepy-consumer-3
+          image: mafehiza/gdalcubepy-consumer-10
+          volumeMounts:
+            - mountPath: "/tmp"
+              name: task-pv-storage
           resources:
             limits:
-              memory: 128Mi
+              memory: 256Mi
               cpu: 300m
-              ephemeral-storage: 300Mi
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: gdalcubepy-notification
-spec:
-  selector:
-    matchLabels:
-      app: gdalcubepy-not
-  replicas: 1 # tells deployment to run 2 pods matching the template
-  template:
-    metadata:
-      labels:
-        app: gdalcubepy-not
-    spec:
-      containers:
-        - name: gdalcubepy-not
-          image: mafehiza/gdalcubepy-notification-3
-          resources:
-            limits:
-              memory: 128Mi
-              cpu: 100m
-              ephemeral-storage: 128Mi
+              ephemeral-storage: 512Mi
+      restartPolicy: OnFailure
+#---
+#apiVersion: apps/v1
+#kind: Deployment
+#metadata:
+#  name: gdalcubepy-notification
+#spec:
+#  selector:
+#    matchLabels:
+#      app: gdalcubepy-not
+#  replicas: 1 # tells deployment to run 2 pods matching the template
+#  template:
+#    metadata:
+#      labels:
+#        app: gdalcubepy-not
+#    spec:
+#      volumes:
+#        - name: task-pv-storage
+#          persistentVolumeClaim:
+#            claimName: task-pv-claim
+#      containers:
+#        - name: gdalcubepy-not
+#          image: mafehiza/gdalcubepy-notification-10
+#          volumeMounts:
+#            - mountPath: "/tmp"
+#              name: task-pv-storage
+#          resources:
+#            limits:
+#              memory: 128Mi
+#              cpu: 100m
+#              ephemeral-storage: 128Mi

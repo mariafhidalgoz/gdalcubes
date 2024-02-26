@@ -111,6 +111,30 @@ Activate environment
 ```shell
 source .venv/bin/activate
 ```
+```python 
+import os
+from gdalcubepy import gdalcubes as gcp
+import time
+import datetime
+
+# gdalcubes: Image Collection
+start_time = time.time()
+# From folder
+gcp.create_image_collection(
+    f"{os.getcwd()}/Python/L8_Amazon_mini",
+    f"{os.getcwd()}/Python/results/new_image_collection_from_folder_test_one_machine.db",
+    f"{os.getcwd()}/formats/L8_SR.json")
+# gdalcubes: Raster Cube
+gcp.raster_cube(
+    f"{os.getcwd()}/Python/results/new_image_collection_from_folder_test_one_machine.db",
+    f"Python/results/netcdf_180_images.nc")
+end_time = time.time()
+start_dt = datetime.datetime.fromtimestamp(start_time)
+end_dt = datetime.datetime.fromtimestamp(end_time)
+res = (f"{end_time - start_time},"
+       f"{start_dt.strftime('%Y-%m-%d %H:%M:%S')},"
+       f"{end_dt.strftime('%Y-%m-%d %H:%M:%S')}")
+```
 
 ```python 
 import os
@@ -139,7 +163,7 @@ gcp.raster_cube(
 
 # Create cube
 cube = gcp.create_image_collection_cube(
-    f"{os.getcwd()}/Python/results/new_image_collection_from_txt_file.db")
+    f"{os.getcwd()}/src/gdalcubes/Python/results/new_image_collection_from_txt_file.db", 0)
 # Chunks number of a cube
 gcp.total_chunks(cube)
 
@@ -210,5 +234,15 @@ Push the image to Docker Hub
 docker tag gdalcubepy mafehiza/gdalcubepy-5
 docker push mafehiza/gdalcubepy-5
 ```
-docker build --tag mafehiza/gdalcubepy-3 -f DockerfilePython .
-docker push mafehiza/gdalcubepy-3
+
+docker build --tag mafehiza/gdalcubepy-10 -f DockerfilePython .
+docker push mafehiza/gdalcubepy-10
+
+
+Last process
+
+docker build --tag mafehiza/gdalcube -f DockerfileC .
+docker push mafehiza/gdalcube
+
+docker build --tag mafehiza/gdalcubepy-12 -f DockerfilePy .
+docker push mafehiza/gdalcubepy-12

@@ -141,6 +141,8 @@ kubectl exec -it kafka-0 -n datacubepy -- bash
 ./bin/kafka-topics.sh --create --partitions 1 --replication-factor 1 --topic gdalcubespy-notifications --bootstrap-server kafka:9092
 ./bin/kafka-topics.sh --create --partitions 3 --replication-factor 1 --topic write-netcdf --bootstrap-server kafka:9092
 
+./bin/kafka-topics.sh --delete --topic write-netcdf --bootstrap-server kafka:9092
+
 ./bin/kafka-topics.sh --describe --topic write-netcdf --bootstrap-server kafka:9092
 
 1. Produce

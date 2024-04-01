@@ -11,4 +11,5 @@ COPY main.py /app/main.py
 
 ENV PATH="/opt/gdalcubes/.venv/bin:$PATH"
 
-CMD python main.py
+#CMD python main.py
+CMD python -u ./main.py --source="/opt/gdalcubes/Python/L8_Amazon_mini" --size="96"

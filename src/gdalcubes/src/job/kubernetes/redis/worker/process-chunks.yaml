@@ -3,17 +3,24 @@ kind: Job
 metadata:
   name: gdalcubepy-process-chunks
 spec:
-  parallelism: 1
+  parallelism: 3
   template:
     metadata:
       name: gdalcubepy-process-chunks
     spec:
+      volumes:
+        - name: task-pv-storage
+          persistentVolumeClaim:
+            claimName: task-pv-claim
       containers:
       - name: gdalcubepy-process-chunks
         image: mafehiza/gdalcubepy-process-chunks
+        volumeMounts:
+          - mountPath: "/tmp"
+            name: task-pv-storage
         resources:
           limits:
             memory: 128Mi
-            cpu: 100m
+            cpu: 1000m
             ephemeral-storage: 128Mi
       restartPolicy: OnFailure

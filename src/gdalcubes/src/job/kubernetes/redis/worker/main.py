@@ -12,7 +12,6 @@ Workers listen to the redis queue and process messages.
 """
 
 import  config
-import  random
 import  json
 import time
 import datetime
@@ -109,14 +108,14 @@ def process_message(db, message_json: str):
     cube = gcp.create_image_collection_cube(output_image_collection, chunk_size)
 
     # Write single chunk netcdf
-    is_chunk_empty = gcp.is_chunk_empty(cube, chunk_id)
-    logging.info(f"Consumer | Main | Chunk Id {chunk_id} is empty {is_chunk_empty}.")
+    # is_chunk_empty = gcp.is_chunk_empty(cube, chunk_id)
+    # logging.info(f"Consumer | Main | Chunk Id {chunk_id} is empty {is_chunk_empty}.")
     start_time = time.time()
-    if not is_chunk_empty:
-        logging.info(f"Consumer | Main | Start processing Chunk Id {chunk_id} ...")
-        output_chunk = f"{files_dest}/{chunks_name}{chunk_id}.nc"
-        gcp.write_single_chunk_netcdf(cube, output_chunk, chunk_id)
-        logging.info(f"Consumer | Main | Chunk Id {chunk_id} processed")
+    # if not is_chunk_empty:
+    logging.info(f"Consumer | Main | Start processing Chunk Id {chunk_id} ...")
+    output_chunk = f"{files_dest}/{chunks_name}{chunk_id}.nc"
+    gcp.write_single_chunk_netcdf(cube, output_chunk, chunk_id)
+    logging.info(f"Consumer | Main | Chunk Id {chunk_id} processed")
     end_time = time.time()
     log_duration = utils_log_times(start_time, end_time)
     logging.info(f"Consumer | Main | seconds,start,end | {log_duration}")
@@ -125,7 +124,7 @@ def process_message(db, message_json: str):
     with open(f"{files_dest}/report_{task_id}_{chunk_id}.txt", "a") as report:
         report.write(f"{task_id},"
                      f"{chunk_id},"
-                     f"{is_chunk_empty},"
+                     # f"{is_chunk_empty},"
                      f"{log_duration}\n")
 
     file_in_process = f"{files_dest}/{task_id}_{chunk_id}.PROCESS"

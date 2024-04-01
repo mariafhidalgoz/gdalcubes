@@ -1,3 +1,5 @@
+https://zachcolinwolpe.medium.com/distributed-computing-concurrency-with-python-redis-586c46a026d0
+
 ```shell
 cd src/gdalcubes/src/job/kubernetes/redis/
 ```
@@ -15,26 +17,21 @@ kubectl apply -f ./service/redis-service.yaml -n datacubepy
 ```
 https://hub.docker.com/
 
+1. Process data.
 
-1. Create new tasks
-
-Enter to the redis pod
 ```shell
-kubectl exec --stdin --tty temp -- /bin/bash
+kubectl apply -f ./worker/process-chunks.yaml -n datacubepy
 ```
 
+1. Create new process. This creates a new task to send data by chunks.
 
-1. Create a job to run the tasks
-
-Create a job
 ```shell
-kubectl apply -f ./kubernetes/deployment.yaml
+kubectl apply -f ./app/send-chunks.yaml -n datacubepy
 ```
 
-Delete a job when it finishes
-```shell
-kubectl delete -f ./kubernetes/deployment.yaml
-```
+kubectl delete -f ./service/redis-pod.yaml -n datacubepy
+kubectl delete -f ./app/send-chunks.yaml -n datacubepy
+kubectl delete -f ./worker/process-chunks.yaml -n datacubepy
 
 
 1. Monitor pods

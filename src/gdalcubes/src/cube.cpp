@@ -1274,6 +1274,7 @@ void cube::write_chunks_kubernetes(
     uint8_t compression_level, bool with_VRT, bool write_bounds,
     packed_export packing, bool drop_empty_slices,
     std::shared_ptr<chunk_processor> p) {
+
     std::string fpath = path + "/" + name + ".nc";
     std::string op = filesystem::make_absolute(fpath);
     if (filesystem::is_directory(op)) {
@@ -1779,7 +1780,7 @@ void cube::write_chunks_kubernetes(
             // filesystem::remove(it->first);
 
             // for debugging only
-            filesystem::move(it->first,it->first + "DONE.nc");
+            filesystem::move(it->first,it->first + ".DONE");
 
         } catch (std::string s) {
             GCBS_ERROR(s);
@@ -1834,8 +1835,8 @@ void cube::write_chunks_kubernetes(
     }
 }
 
-void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, uint8_t compression_level) {
-
+bool cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, uint8_t compression_level) {
+    std::cout << "Merging | write_single_chunk_netcdf" << std::endl;
 
     std::string fname = path;  // TODO: check for existence etc.
 
@@ -1848,8 +1849,10 @@ void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
 
     std::shared_ptr<chunk_data> dat = this->read_chunk(id);
     if (dat->empty()) {
-        GCBS_DEBUG("Requested chunk is completely empty (NAN), and will not be written to a netCDF file on disk");
-    }
+//        GCBS_DEBUG("Requested chunk is completely empty (NAN), and will not be written to a netCDF file on disk");
+        std::cout << "Chunk " << std::to_string(id) << " is completely empty." << std::endl;
+        return true;
+    } else {
 
     double *dim_x = (double *)std::calloc(dat->size()[3], sizeof(double));
     double *dim_y = (double *)std::calloc(dat->size()[2], sizeof(double));
@@ -2051,6 +2054,9 @@ void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
         nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(((double *)dat->buf()) + (int)i * (int)dat->size()[1] * (int)dat->size()[2] * (int)dat->size()[3]));
     }
     nc_close(ncout);
+        std::cout << "Chunk " << std::to_string(id) << " merged successfully." << std::endl;
+        return false;
+}
 }
 
 void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compression_level, std::shared_ptr<chunk_processor> p) {

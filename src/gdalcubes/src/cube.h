@@ -939,7 +939,7 @@ class cube : public std::enable_shared_from_this<cube> {
 
     std::shared_ptr<chunk_data> to_double_array(std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
-    void write_single_chunk_netcdf(chunkid_t id, std::string path, uint8_t compression_level = 0);
+    bool write_single_chunk_netcdf(chunkid_t id, std::string path, uint8_t compression_level = 0);
 
     /**
      * @brief Writes a data cube as a collection of PNG files

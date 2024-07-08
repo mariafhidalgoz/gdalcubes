@@ -35,11 +35,14 @@ class gdalcubes {
     static void write_chunks_netcdf(
         std::string input,
         std::string output);
-    static void write_single_chunk_netcdf(
+    static bool write_single_chunk_netcdf(
         std::string input,
         std::string output,
-        chunkid_t chunk_id);
-    static void write_single_chunk_netcdf(
+        chunkid_t chunk_id,
+        uint32_t t,
+        uint32_t x,
+        uint32_t y);
+    static bool write_single_chunk_netcdf(
         std::shared_ptr<image_collection_cube> cube,
         std::string output,
         chunkid_t chunk_id);

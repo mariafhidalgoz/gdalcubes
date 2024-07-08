@@ -180,33 +180,55 @@ void gdalcubes::write_chunks_netcdf(
     std::cout << "Write Chunks NetCDF" << std::endl;
 }
 
-void gdalcubes::write_single_chunk_netcdf(
+bool gdalcubes::write_single_chunk_netcdf(
     std::string input = "./image_collection.db",
     std::string output = "./single_chunk.nc",
-    chunkid_t chunk_id = 1) {
+    chunkid_t chunk_id = 1,
+    uint32_t t = 0, uint32_t x = 0, uint32_t y = 0
+    ) {
     config::instance()->gdalcubes_init();
 
+    std::cout << "write_single_chunk_netcdf | input" << input << std::endl;
     auto icc = image_collection_cube::create(input);
     std::cout << "Raster Cube created" << std::endl;
 
-    icc->write_single_chunk_netcdf(chunk_id, output, 0);
-    std::cout << "Write Single NetCDF" << std::endl;
+    if (t > 0 && x > 0 && y > 0) {
+        icc->set_chunk_size(t, x, y);
+        std::cout << "[C++] " << "gdalcubes | write_single_chunk_netcdf | Set chunk size again for chunks job" << std::endl;
+    }
+
+    auto ndvi = apply_pixel_cube::create(icc, {"(B04-B05)/(B04+B05)"});
+    //    auto cb = select_bands_cube::create(icc, std::vector<std::string>{"B04", "B05"});
+    std::cout << "Set NDVI" << std::endl;
+
+    auto process_state = ndvi->write_single_chunk_netcdf(chunk_id, output, 0);
+    //    auto process_state = icc->write_single_chunk_netcdf(chunk_id, output, 0);
+    std::cout << "Write Single NetCDF. Process state: " << process_state << std::endl;
+
+    return process_state;
 }
 
-void gdalcubes::write_single_chunk_netcdf(
+bool gdalcubes::write_single_chunk_netcdf(
     std::shared_ptr<image_collection_cube> cube,
     std::string output = "./single_chunk.nc",
     chunkid_t chunk_id = 1) {
     config::instance()->gdalcubes_init();
 
-    cube->write_single_chunk_netcdf(chunk_id, output, 0);
-    std::cout << "Write Single NetCDF" << std::endl;
+    auto ndvi = apply_pixel_cube::create(cube, {"(B04-B05)/(B04+B05)"});
+    //    auto cb = select_bands_cube::create(icc, std::vector<std::string>{"B04", "B05"});
+    std::cout << "Set NDVI" << std::endl;
+
+    auto process_state = ndvi->write_single_chunk_netcdf(chunk_id, output, 0);
+    //    auto process_state = cube->write_single_chunk_netcdf(chunk_id, output, 0);
+    std::cout << "Write Single NetCDF. Process state: " << process_state << std::endl;
+
+    return process_state;
 }
 
 // TODO: merge chunks when they are done
 void gdalcubes::merge_chunks(std::shared_ptr<image_collection_cube> cube, std::string work_dir, std::string file_name) {
 
-    config::instance()->set_default_chunk_processor(std::make_shared<chunk_processor_multithread>(2));
+    config::instance()->set_default_chunk_processor(std::make_shared<chunk_processor_multithread>(1));
     //    config::instance()->set_default_chunk_processor(std::dynamic_pointer_cast<chunk_processor>(std::make_shared<chunk_processor_multithread>(2)));
 
     cube->write_chunks_kubernetes(work_dir, file_name);

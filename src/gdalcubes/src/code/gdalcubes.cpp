@@ -131,9 +131,11 @@ std::shared_ptr<image_collection_cube> gdalcubes::create_image_collection_cube(
 
     auto icc = image_collection_cube::create(input);
     std::cout << "[C++] create_image_collection_cube | Raster Cube created" << std::endl;
-    uint32_t chunk_t = icc->chunk_size()[0];
-    uint32_t chunk_y = icc->chunk_size()[1];
-    uint32_t chunk_x = icc->chunk_size()[2];
+
+    auto tzx = icc->chunk_size();
+    uint32_t chunk_t = tzx[0];
+    uint32_t chunk_y = tzx[1];
+    uint32_t chunk_x = tzx[2];
     if (t > 0) {
         chunk_t = t;
     }
@@ -150,9 +152,9 @@ std::shared_ptr<image_collection_cube> gdalcubes::create_image_collection_cube(
     std::cout << "[C++] create_image_collection_cube | Count Chunks" << std::endl;
     std::cout << "[C++] Total Chunks:" << icc->count_chunks() << std::endl;
     std::cout << "[C++] Size Chunks:" << std::endl;
-    std::cout << "[C++] Time:" << icc->chunk_size()[0] << std::endl;
-    std::cout << "[C++] Y:" << icc->chunk_size()[1] << std::endl;
-    std::cout << "[C++] Z:" << icc->chunk_size()[2] << std::endl;
+    std::cout << "[C++] Time:" << chunk_t << std::endl;
+    std::cout << "[C++] Y:" << chunk_y << std::endl;
+    std::cout << "[C++] X:" << chunk_x << std::endl;
 
     return icc;
 }
@@ -205,9 +207,10 @@ bool gdalcubes::write_single_chunk_netcdf(
     auto icc = image_collection_cube::create(input);
     std::cout << "[C++] write_single_chunk_netcdf | Raster Cube created" << std::endl;
 
-    uint32_t chunk_t = icc->chunk_size()[0];
-    uint32_t chunk_y = icc->chunk_size()[1];
-    uint32_t chunk_x = icc->chunk_size()[2];
+    auto tzx = icc->chunk_size();
+    uint32_t chunk_t = tzx[0];
+    uint32_t chunk_y = tzx[1];
+    uint32_t chunk_x = tzx[2];
     if (t > 0) {
         chunk_t = t;
     }

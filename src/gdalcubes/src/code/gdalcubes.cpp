@@ -67,11 +67,11 @@ void gdalcubes::create_image_collection(
     if (scan_archives) {
         in = image_collection::unroll_archives(in);
     }
-    std::cout << "[C++] create_image_collection | ARCHIVES" << std::endl;
+//    std::cout << "[C++] create_image_collection | ARCHIVES" << std::endl;
     std::cout << "[C++] " << in.data() << std::endl;
 
     collection_format f(format);
-    std::cout << "[C++] create_image_collection | format" << std::endl;
+//    std::cout << "[C++] create_image_collection | format" << std::endl;
     std::cout << "[C++] " << format << std::endl;
 
     auto ic = image_collection::create(f, in, strict);
@@ -79,7 +79,7 @@ void gdalcubes::create_image_collection(
     std::cout << "[C++] " << ic << std::endl;
 
     ic->write(output);
-    std::cout << "[C++] create_image_collection | Path: " << output << std::endl;
+    std::cout << "[C++] create_image_collection | Path: " << output << " | format: " << format << std::endl;
 }
 
 std::vector<std::string> gdalcubes::string_list_from_text_file(std::string filename) {
@@ -159,8 +159,8 @@ std::shared_ptr<image_collection_cube> gdalcubes::create_image_collection_cube(
 
 int gdalcubes::total_chunks(std::shared_ptr<image_collection_cube> cube) {
     uint16_t count_chunks = cube->count_chunks();
-    std::cout << "[C++] Total Chunk | count_chunks" << std::endl;
-    std::cout << "[C++] " << count_chunks << std::endl;
+//    std::cout << "[C++] Total Chunk | count_chunks" << std::endl;
+//    std::cout << "[C++] " << count_chunks << std::endl;
     return count_chunks;
 }
 

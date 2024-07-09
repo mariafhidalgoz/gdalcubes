@@ -4,7 +4,7 @@ metadata:
   name: task-pv-claim
   namespace: datacubepy
 spec:
-  storageClassName: usersharebronze
+  storageClassName: standard
   accessModes:
     - ReadWriteMany
   resources:

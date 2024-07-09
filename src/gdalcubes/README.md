@@ -1,4 +1,8 @@
 
+```shell
+cd src/gdalcubes
+```
+
 Create environment
 ```shell
 virtualenv --python=python3.10 .venv

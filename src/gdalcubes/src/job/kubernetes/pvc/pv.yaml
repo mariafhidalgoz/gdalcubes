@@ -1,0 +1,30 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: task-pv-volume
+  labels:
+    name: task-pv-volume
+spec:
+  capacity:
+    storage: 200Gi
+  storageClassName: standard
+  accessModes:
+    - ReadWriteMany
+  gcePersistentDisk:
+    pdName: task-pv-volume
+    fsType: ext4
+    readOnly: true
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: task-pv-claim
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 200Gi
+  selector:
+    matchLabels:
+      name: task-pv-volume

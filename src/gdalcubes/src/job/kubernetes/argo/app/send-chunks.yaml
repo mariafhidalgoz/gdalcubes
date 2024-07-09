@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gdalcubepy-send-chunks
+spec:
+  parallelism: 1
+  template:
+    metadata:
+      name: gdalcubepy-send-chunks
+    spec:
+      volumes:
+        - name: task-pv-storage
+          persistentVolumeClaim:
+            claimName: task-pv-claim
+      containers:
+      - name: send-chunks
+        image: mafehiza/gdalcubepy-send-chunks-size-64
+        volumeMounts:
+          - mountPath: "/tmp"
+            name: task-pv-storage
+        resources:
+          limits:
+            memory: 128Mi
+            cpu: 100m
+            ephemeral-storage: 128Mi
+      restartPolicy: OnFailure

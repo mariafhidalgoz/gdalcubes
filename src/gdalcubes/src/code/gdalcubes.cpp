@@ -38,7 +38,7 @@ void gdalcubes::create_image_collection(
     std::vector<std::string> in;
 
     if (filesystem::is_directory(input)) {
-        std::cout << "Is directory" << std::endl;
+        std::cout << "[C++] create_image_collection | Is directory" << std::endl;
         if (recursive) {
             filesystem::iterate_directory_recursive(input, [&in](const std::string &p) {
                 if (filesystem::is_regular_file(p)) {
@@ -48,36 +48,38 @@ void gdalcubes::create_image_collection(
 
         } else {
             filesystem::iterate_directory(input, [&in](const std::string &p) {
-                std::cout << "Is file" << std::endl;
-                std::cout << p << std::endl;
+                std::cout << "[C++] create_image_collection | Is file" << std::endl;
+                std::cout << "[C++] " << p << std::endl;
                 if (filesystem::is_regular_file(p)) {
-                    std::cout << "Push file" << std::endl;
+                    std::cout << "[C++] Push file" << std::endl;
                     in.push_back(filesystem::make_absolute(p));
                 }
             });
         }
     } else if (filesystem::is_regular_file(input)) {
-        std::cout << "Is regular file" << std::endl;
+        std::cout << "[C++] create_image_collection | Is regular file" << std::endl;
         in = string_list_from_text_file(input);
     } else {
+        std::cout << "[C++] create_image_collection | ERROR in gdalcubes create_collection: Invalid input, provide a text file or directory." << std::endl;
         throw std::string("ERROR in gdalcubes create_collection: Invalid input, provide a text file or directory.");
     }
 
     if (scan_archives) {
         in = image_collection::unroll_archives(in);
     }
-    std::cout << "ARCHIVES" << std::endl;
-    std::cout << in.data() << std::endl;
+    std::cout << "[C++] create_image_collection | ARCHIVES" << std::endl;
+    std::cout << "[C++] " << in.data() << std::endl;
 
     collection_format f(format);
-    std::cout << format << std::endl;
+    std::cout << "[C++] create_image_collection | format" << std::endl;
+    std::cout << "[C++] " << format << std::endl;
 
     auto ic = image_collection::create(f, in, strict);
-    std::cout << "Image Collection created" << std::endl;
-    std::cout << ic << std::endl;
+    std::cout << "[C++] create_image_collection | Image Collection created" << std::endl;
+    std::cout << "[C++] " << ic << std::endl;
 
     ic->write(output);
-    std::cout << "Path: " << output << std::endl;
+    std::cout << "[C++] create_image_collection | Path: " << output << std::endl;
 }
 
 std::vector<std::string> gdalcubes::string_list_from_text_file(std::string filename) {
@@ -102,22 +104,22 @@ void gdalcubes::raster_cube(
     //    cv.set_x_axis(-59.12746, -52.09798, 100.0);
     //    cv.set_y_axis(-6.84404, -1.844241, 100.0);
     //    cv.set_t_axis(datetime::from_string("2014-07-01"), datetime::from_string("2014-07-31"), duration::from_string("P1D"));
-    //    std::cout << "Cube View created" << std::endl;
-    //    std::cout << cv.bottom() << std::endl;
-    //    std::cout << cv.dx() << std::endl;
+    //    std::cout << "[C++] Cube View created" << std::endl;
+    //    std::cout << "[C++] " << cv.bottom() << std::endl;
+    //    std::cout << "[C++] " << cv.dx() << std::endl;
 
     //    auto icc = image_collection_cube::create(input, cv);
     auto icc = image_collection_cube::create(input);
     //    auto icc = image_collection_cube::create(ic, cv);
     //    auto icc = image_collection_cube::create(ic);
-    std::cout << "Image Collection Cube | Raster Cube created" << std::endl;
+    std::cout << "[C++] raster_cube | Raster Cube created" << std::endl;
     //    std::cout << icc << std::endl;
 
     //    auto cb = select_bands_cube::create(icc, std::vector<std::string>{"B04", "B05"});
-    //    std::cout << "Select Bands" << std::endl;
+    //    std::cout << "[C++] Select Bands" << std::endl;
     //    cb->write_netcdf_file(output);
     icc->write_netcdf_file(output);
-    std::cout << "Write NetCDF" << std::endl;
+    std::cout << "[C++] raster_cube | Write NetCDF" << std::endl;
 }
 
 std::shared_ptr<image_collection_cube> gdalcubes::create_image_collection_cube(
@@ -128,7 +130,7 @@ std::shared_ptr<image_collection_cube> gdalcubes::create_image_collection_cube(
     config::instance()->gdalcubes_init();
 
     auto icc = image_collection_cube::create(input);
-    std::cout << "[C++] " << "Image Collection Cube | Raster Cube created" << std::endl;
+    std::cout << "[C++] create_image_collection_cube | Raster Cube created" << std::endl;
     uint32_t chunk_t = icc->chunk_size()[0];
     uint32_t chunk_y = icc->chunk_size()[1];
     uint32_t chunk_x = icc->chunk_size()[2];
@@ -143,22 +145,22 @@ std::shared_ptr<image_collection_cube> gdalcubes::create_image_collection_cube(
     }
 
     icc->set_chunk_size(chunk_t, chunk_y, chunk_x);
-    std::cout << "[C++] " << "Image Collection Cube | Size Chunks Set" << std::endl;
+    std::cout << "[C++] create_image_collection_cube | Size Chunks Set" << std::endl;
 
-    std::cout << "[C++] " << "Image Collection Cube | Count Chunks" << std::endl;
-    std::cout << "[C++] " << "Total Chunks:" << icc->count_chunks() << std::endl;
-    std::cout << "[C++] " << "Image Collection Cube | Size Chunks:" << std::endl;
-    std::cout << "[C++] " << "Time:" << icc->chunk_size()[0] << std::endl;
-    std::cout << "[C++] " << "Y:" << icc->chunk_size()[1] << std::endl;
-    std::cout << "[C++] " << "Z:" << icc->chunk_size()[2] << std::endl;
+    std::cout << "[C++] create_image_collection_cube | Count Chunks" << std::endl;
+    std::cout << "[C++] Total Chunks:" << icc->count_chunks() << std::endl;
+    std::cout << "[C++] Size Chunks:" << std::endl;
+    std::cout << "[C++] Time:" << icc->chunk_size()[0] << std::endl;
+    std::cout << "[C++] Y:" << icc->chunk_size()[1] << std::endl;
+    std::cout << "[C++] Z:" << icc->chunk_size()[2] << std::endl;
 
     return icc;
 }
 
 int gdalcubes::total_chunks(std::shared_ptr<image_collection_cube> cube) {
     uint16_t count_chunks = cube->count_chunks();
-    std::cout << "count_chunks" << std::endl;
-    std::cout << count_chunks << std::endl;
+    std::cout << "[C++] Total Chunk | count_chunks" << std::endl;
+    std::cout << "[C++] " << count_chunks << std::endl;
     return count_chunks;
 }
 
@@ -177,18 +179,18 @@ void gdalcubes::write_chunks_netcdf(
     config::instance()->gdalcubes_init();
 
     auto icc = image_collection_cube::create(input);
-    std::cout << "Image Collection Cube | Raster Cube created" << std::endl;
+    std::cout << "[C++] write_chunks_netcdf | Raster Cube created" << std::endl;
 
     auto ndvi = apply_pixel_cube::create(icc, {"(B04-B05)/(B04+B05)"});
     //    auto cb = select_bands_cube::create(icc, std::vector<std::string>{"B04", "B05"});
+    std::cout << "[C++] write_chunks_netcdf | NDVI Created" << std::endl;
 
     //    uint16_t count_chunks = icc->count_chunks();
     uint16_t count_chunks = ndvi->count_chunks();
-    std::cout << "count_chunks" << std::endl;
-    std::cout << count_chunks << std::endl;
+    std::cout << "[C++] write_chunks_netcdf | count_chunks" << count_chunks << std::endl;
     //    icc->write_chunks_netcdf(output, "chunks", 0);
     ndvi->write_chunks_netcdf(output, "chunks", 0);
-    std::cout << "Write Chunks NetCDF" << std::endl;
+    std::cout << "[C++] write_chunks_netcdf | Write Chunks NetCDF" << std::endl;
 }
 
 bool gdalcubes::write_single_chunk_netcdf(
@@ -199,9 +201,9 @@ bool gdalcubes::write_single_chunk_netcdf(
     ) {
     config::instance()->gdalcubes_init();
 
-    std::cout << "write_single_chunk_netcdf | input" << input << std::endl;
+    std::cout << "[C++] write_single_chunk_netcdf | input " << input << std::endl;
     auto icc = image_collection_cube::create(input);
-    std::cout << "Raster Cube created" << std::endl;
+    std::cout << "[C++] write_single_chunk_netcdf | Raster Cube created" << std::endl;
 
     uint32_t chunk_t = icc->chunk_size()[0];
     uint32_t chunk_y = icc->chunk_size()[1];
@@ -217,15 +219,15 @@ bool gdalcubes::write_single_chunk_netcdf(
     }
 
     icc->set_chunk_size(chunk_t, chunk_y, chunk_x);
-    std::cout << "[C++] " << "gdalcubes | write_single_chunk_netcdf | Set chunk size again for chunks job" << std::endl;
+    std::cout << "[C++] write_single_chunk_netcdf | Set chunk size again for chunks job" << std::endl;
 
     auto ndvi = apply_pixel_cube::create(icc, {"(B04-B05)/(B04+B05)"});
     //    auto cb = select_bands_cube::create(icc, std::vector<std::string>{"B04", "B05"});
-    std::cout << "Set NDVI" << std::endl;
+    std::cout << "[C++] write_single_chunk_netcdf | Set NDVI" << std::endl;
 
     auto process_state = ndvi->write_single_chunk_netcdf(chunk_id, output, 0);
     //    auto process_state = icc->write_single_chunk_netcdf(chunk_id, output, 0);
-    std::cout << "Write Single NetCDF. Process state: " << process_state << std::endl;
+    std::cout << "[C++] write_single_chunk_netcdf | Write Single NetCDF. Process state: " << process_state << std::endl;
 
     return process_state;
 }
@@ -238,11 +240,11 @@ bool gdalcubes::write_single_chunk_netcdf(
 
     auto ndvi = apply_pixel_cube::create(cube, {"(B04-B05)/(B04+B05)"});
     //    auto cb = select_bands_cube::create(icc, std::vector<std::string>{"B04", "B05"});
-    std::cout << "Set NDVI" << std::endl;
+    std::cout << "[C++] write_single_chunk_netcdf with cube | Set NDVI" << std::endl;
 
     auto process_state = ndvi->write_single_chunk_netcdf(chunk_id, output, 0);
     //    auto process_state = cube->write_single_chunk_netcdf(chunk_id, output, 0);
-    std::cout << "Write Single NetCDF. Process state: " << process_state << std::endl;
+    std::cout << "[C++] write_single_chunk_netcdf with cube | Write Single NetCDF. Process state: " << process_state << std::endl;
 
     return process_state;
 }

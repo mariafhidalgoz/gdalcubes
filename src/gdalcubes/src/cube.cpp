@@ -1609,13 +1609,11 @@ void cube::write_chunks_kubernetes(
         if (dim_x_bnds) std::free(dim_x_bnds);
     }
 
-    std::cout << "write_netcdf_file | create ncdf" << std::endl;
-
-    std::cout << "chunk_processor_multithread | apply" << std::endl;
+    std::cout << "[C++] write_chunks_kubernetes | chunk_processor_multithread | apply" << std::endl;
 
     std::mutex mutex;
     std::string work_dir = path;
-    std::cout << "chunk_processor_multithread | work_dir" << work_dir<< std::endl;
+    std::cout << "[C++] write_chunks_kubernetes | chunk_processor_multithread | work_dir" << work_dir<< std::endl;
 
     // 1. find .nc files ready
     std::vector<std::pair<std::string, chunkid_t>> chunk_queue;
@@ -1637,7 +1635,7 @@ void cube::write_chunks_kubernetes(
     // 2. read list of .nc files ready
     for (auto it = chunk_queue.begin(); it != chunk_queue.end(); ++it) {
         try {
-            std::cout << "Merging chunk " << std::to_string(it->second) << " from " << it->first << std::endl;
+            std::cout << "[C++] write_chunks_kubernetes | Merging chunk " << std::to_string(it->second) << " from " << it->first << std::endl;
             std::shared_ptr<chunk_data> dat = std::make_shared<chunk_data>();
             dat->read_ncdf_full(it->first);
             // f(it->second, dat, mutex);
@@ -1646,7 +1644,7 @@ void cube::write_chunks_kubernetes(
 //            std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op, prg, &v_bands, ncout, &packing](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
 
                 // 3. merge chunk to cube
-                std::cout << "write_netcdf_file | run function: Merge chunk to cube" << std::endl;
+                std::cout << "[C++] write_chunks_kubernetes | write_netcdf_file | run function: Merge chunk to cube" << std::endl;
 
                 // TODO: check if it is OK to simply not write anything to netCDF or if we need to fill dat explicity with no data values, check also for packed output
                 if (!dat->empty()) {
@@ -1836,7 +1834,7 @@ void cube::write_chunks_kubernetes(
 }
 
 bool cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, uint8_t compression_level) {
-    std::cout << "Merging | write_single_chunk_netcdf" << std::endl;
+    std::cout << "[C++] write_single_chunk_netcdf | Merging | write_single_chunk_netcdf" << std::endl;
 
     std::string fname = path;  // TODO: check for existence etc.
 
@@ -1850,7 +1848,7 @@ bool cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
     std::shared_ptr<chunk_data> dat = this->read_chunk(id);
     if (dat->empty()) {
 //        GCBS_DEBUG("Requested chunk is completely empty (NAN), and will not be written to a netCDF file on disk");
-        std::cout << "Chunk " << std::to_string(id) << " is completely empty." << std::endl;
+        std::cout << "[C++] write_single_chunk_netcdf | Chunk " << std::to_string(id) << " is completely empty." << std::endl;
         return true;
     } else {
 
@@ -2054,7 +2052,7 @@ bool cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
         nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(((double *)dat->buf()) + (int)i * (int)dat->size()[1] * (int)dat->size()[2] * (int)dat->size()[3]));
     }
     nc_close(ncout);
-        std::cout << "Chunk " << std::to_string(id) << " merged successfully." << std::endl;
+        std::cout << "[C++] write_single_chunk_netcdf | Chunk " << std::to_string(id) << " merged successfully." << std::endl;
         return false;
 }
 }
@@ -2341,7 +2339,7 @@ void chunk_processor_multithread::apply_2(std::shared_ptr<cube> c,
                                           std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f,
                                           std::string work_dir) {
 
-    std::cout << "chunk_processor_multithread | apply" << std::endl;
+    std::cout << "[C++] apply_2 | chunk_processor_multithread | apply" << std::endl;
 
     std::mutex mutex;
 //    std::string work_dir = "Python/results/test3";
@@ -2366,7 +2364,7 @@ void chunk_processor_multithread::apply_2(std::shared_ptr<cube> c,
     // 2. read list of .nc files ready
     for (auto it = chunk_queue.begin(); it != chunk_queue.end(); ++it) {
         try {
-            std::cout << "Merging chunk " << std::to_string(it->second) << " from " << it->first << std::endl;
+            std::cout << "[C++] apply_2 | Merging chunk " << std::to_string(it->second) << " from " << it->first << std::endl;
             std::shared_ptr<chunk_data> dat = std::make_shared<chunk_data>();
             dat->read_ncdf_full(it->first);
             f(it->second, dat, mutex);
@@ -2865,7 +2863,7 @@ void chunk_data::read_ncdf_full(std::string path) {
         throw std::string("No variables found in netCDF file '" + path + "'");
     } else {
 
-        std::cout << "Read Chunk NCDF | nvars: " << nvars << std::endl;
+        std::cout << "[C++] read_ncdf_full | Read Chunk NCDF | nvars: " << nvars << std::endl;
 
         for (uint16_t i = 0; i < nvars; ++i) {
             if (i == var_id_t ||
@@ -2875,7 +2873,7 @@ void chunk_data::read_ncdf_full(std::string path) {
             char *name = (char *)std::malloc(NC_MAX_NAME * sizeof(char));
             retval = nc_inq_varname(ncfile, i, name);  // TODO: error handling
             std::string varname = name;
-            std::cout << "Read Chunk NCDF | varname: " << varname << std::endl;
+            std::cout << "[C++] read_ncdf_full | Read Chunk NCDF | varname: " << varname << std::endl;
             std::free(name);
             int ndims = -1;
             retval = nc_inq_varndims(ncfile, i, &ndims);  // TODO: error handling
@@ -2925,9 +2923,9 @@ void chunk_data::read_ncdf_full(std::string path) {
                 int storage_in;
                 if (nc_inq_var_chunking(ncfile, i, &storage_in, chunksize_in) == NC_NOERR) {
                     if (storage_in == NC_CHUNKED) {
-                        std::cout << "Read Chunk NCDF | chunksize_in[0]: " << chunksize_in[0] << std::endl;
-                        std::cout << "Read Chunk NCDF | chunksize_in[1]: " << chunksize_in[1] << std::endl;
-                        std::cout << "Read Chunk NCDF | chunksize_in[2]: " << chunksize_in[2] << std::endl;
+                        std::cout << "[C++] read_ncdf_full | Read Chunk NCDF | chunksize_in[0]: " << chunksize_in[0] << std::endl;
+                        std::cout << "[C++] read_ncdf_full | Read Chunk NCDF | chunksize_in[1]: " << chunksize_in[1] << std::endl;
+                        std::cout << "[C++] read_ncdf_full | Read Chunk NCDF | chunksize_in[2]: " << chunksize_in[2] << std::endl;
                         _chunk_size[0] = chunksize_in[0];
                         _chunk_size[1] = chunksize_in[1];
                         _chunk_size[2] = chunksize_in[2];
@@ -2954,10 +2952,10 @@ void chunk_data::read_ncdf_full(std::string path) {
 
     // Derive how many pixels the chunk has (this varies for chunks at the boundary)
     coords_nd<uint32_t, 3> size_tyx = chunk_size();
-    std::cout << "Read Chunk NCDF | _bands.count(): " << _bands.count() << std::endl;
-    std::cout << "Read Chunk NCDF | size_tyx[0]: " << size_tyx[0] << std::endl;
-    std::cout << "Read Chunk NCDF | size_tyx[1]: " << size_tyx[1] << std::endl;
-    std::cout << "Read Chunk NCDF | size_tyx[2]: " << size_tyx[2] << std::endl;
+    std::cout << "[C++] read_ncdf_full | Read Chunk NCDF | _bands.count(): " << _bands.count() << std::endl;
+    std::cout << "[C++] read_ncdf_full | Read Chunk NCDF | size_tyx[0]: " << size_tyx[0] << std::endl;
+    std::cout << "[C++] read_ncdf_full | Read Chunk NCDF | size_tyx[1]: " << size_tyx[1] << std::endl;
+    std::cout << "[C++] read_ncdf_full | Read Chunk NCDF | size_tyx[2]: " << size_tyx[2] << std::endl;
     coords_nd<uint32_t, 4> size_btyx = {_bands.count(), size_tyx[0], size_tyx[1], size_tyx[2]};
     this->size(size_btyx);
 
@@ -2969,9 +2967,9 @@ void chunk_data::read_ncdf_full(std::string path) {
 
 
     bounds_nd<uint32_t, 3> climits = chunk_limits();
-    std::cout << "Read Chunk NCDF | climits.low[0]: " << climits.low[0] << std::endl;
-    std::cout << "Read Chunk NCDF | climits.low[1]: " << climits.low[1] << std::endl;
-    std::cout << "Read Chunk NCDF | climits.low[2]: " << climits.low[2] << std::endl;
+    std::cout << "[C++] read_ncdf_full | Read Chunk NCDF | climits.low[0]: " << climits.low[0] << std::endl;
+    std::cout << "[C++] read_ncdf_full | Read Chunk NCDF | climits.low[1]: " << climits.low[1] << std::endl;
+    std::cout << "[C++] read_ncdf_full | Read Chunk NCDF | climits.low[2]: " << climits.low[2] << std::endl;
     std::size_t startp[] = {climits.low[0], climits.low[1], climits.low[2]};
     std::size_t countp[] = {size_btyx[1], size_btyx[2], size_btyx[3]};
 

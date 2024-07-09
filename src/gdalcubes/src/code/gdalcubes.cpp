@@ -122,17 +122,28 @@ void gdalcubes::raster_cube(
 
 std::shared_ptr<image_collection_cube> gdalcubes::create_image_collection_cube(
     std::string input = "./image_collection.db",
-    uint32_t chunk_size = 0) {
+    uint32_t x = 0, uint32_t y = 0, uint32_t t = 0
+) {
 
     config::instance()->gdalcubes_init();
 
     auto icc = image_collection_cube::create(input);
     std::cout << "[C++] " << "Image Collection Cube | Raster Cube created" << std::endl;
-
-    if (chunk_size > 0) {
-        icc->set_chunk_size(icc->chunk_size()[0], chunk_size, chunk_size);
-        std::cout << "[C++] " << "Image Collection Cube | Size Chunks Set" << std::endl;
+    uint32_t chunk_t = icc->chunk_size()[0];
+    uint32_t chunk_y = icc->chunk_size()[1];
+    uint32_t chunk_x = icc->chunk_size()[2];
+    if (t > 0) {
+        chunk_t = t;
     }
+    if (y > 0) {
+        chunk_y = y;
+    }
+    if (x > 0) {
+        chunk_x = x;
+    }
+
+    icc->set_chunk_size(chunk_t, chunk_y, chunk_x);
+    std::cout << "[C++] " << "Image Collection Cube | Size Chunks Set" << std::endl;
 
     std::cout << "[C++] " << "Image Collection Cube | Count Chunks" << std::endl;
     std::cout << "[C++] " << "Total Chunks:" << icc->count_chunks() << std::endl;
@@ -184,7 +195,7 @@ bool gdalcubes::write_single_chunk_netcdf(
     std::string input = "./image_collection.db",
     std::string output = "./single_chunk.nc",
     chunkid_t chunk_id = 1,
-    uint32_t t = 0, uint32_t x = 0, uint32_t y = 0
+    uint32_t x = 0, uint32_t y = 0, uint32_t t = 0
     ) {
     config::instance()->gdalcubes_init();
 
@@ -192,10 +203,21 @@ bool gdalcubes::write_single_chunk_netcdf(
     auto icc = image_collection_cube::create(input);
     std::cout << "Raster Cube created" << std::endl;
 
-    if (t > 0 && x > 0 && y > 0) {
-        icc->set_chunk_size(t, x, y);
-        std::cout << "[C++] " << "gdalcubes | write_single_chunk_netcdf | Set chunk size again for chunks job" << std::endl;
+    uint32_t chunk_t = icc->chunk_size()[0];
+    uint32_t chunk_y = icc->chunk_size()[1];
+    uint32_t chunk_x = icc->chunk_size()[2];
+    if (t > 0) {
+        chunk_t = t;
     }
+    if (y > 0) {
+        chunk_y = y;
+    }
+    if (x > 0) {
+        chunk_x = x;
+    }
+
+    icc->set_chunk_size(chunk_t, chunk_y, chunk_x);
+    std::cout << "[C++] " << "gdalcubes | write_single_chunk_netcdf | Set chunk size again for chunks job" << std::endl;
 
     auto ndvi = apply_pixel_cube::create(icc, {"(B04-B05)/(B04+B05)"});
     //    auto cb = select_bands_cube::create(icc, std::vector<std::string>{"B04", "B05"});

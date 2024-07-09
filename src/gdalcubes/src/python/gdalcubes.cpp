@@ -38,9 +38,9 @@ void init_gdalcubes(py::module &m) {
                     py::overload_cast<std::string, uint32_t, uint32_t, uint32_t>(
                         &gdalcubes::gdalcubes::create_image_collection_cube),
                     py::arg("input"),
+                    py::arg("t"),
                     py::arg("x"),
-                    py::arg("y"),
-                    py::arg("t"))
+                    py::arg("y"))
         .def_static("total_chunks",
                     py::overload_cast<std::shared_ptr<gdalcubes::image_collection_cube>>(
                         &gdalcubes::gdalcubes::total_chunks),
@@ -62,9 +62,9 @@ void init_gdalcubes(py::module &m) {
                     py::arg("input"),
                     py::arg("output"),
                     py::arg("chunk_id"),
+                    py::arg("t"),
                     py::arg("x"),
-                    py::arg("y"),
-                    py::arg("t"))
+                    py::arg("y"))
         .def_static("write_single_chunk_netcdf",
                     py::overload_cast<std::shared_ptr<gdalcubes::image_collection_cube>, std::string, gdalcubes::chunkid_t>(
                         &gdalcubes::gdalcubes::write_single_chunk_netcdf),
